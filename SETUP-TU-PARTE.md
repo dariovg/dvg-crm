@@ -32,16 +32,29 @@ postgresql://dvgcrm:TU_PASSWORD@ENDPOINT.rds.amazonaws.com:5432/dvgcrm?sslmode=r
 
 ---
 
-## Paso 2 — Google OAuth para login del CRM (~10 min)
+## Paso 2 — Login del CRM (email + contraseña)
 
-1. [Google Cloud Console](https://console.cloud.google.com/) → mismo proyecto que Calendar si ya lo tienes
-2. **APIs & Services → Credentials → Create OAuth client ID**
-3. Type: **Web application**
-4. Name: `DVG CRM`
-5. Authorized redirect URIs (añade ambas):
-   - `http://localhost:3000/api/auth/callback/google`
-   - `https://TU-PROYECTO.vercel.app/api/auth/callback/google` *(la pondrás después del deploy)*
-6. Copia **Client ID** y **Client secret**
+No hace falta Google OAuth.
+
+1. Genera el hash de la contraseña (solo en terminal, no la guardes en git):
+
+```bash
+cd ~/Documents/dvg-crm
+CRM_ADMIN_PASSWORD='Informatica97' node scripts/seed-admin.js
+```
+
+2. Copia `CRM_ADMIN_PASSWORD_HASH` a Vercel.
+
+Variables en Vercel (proyecto CRM):
+
+| Variable | Valor |
+|----------|--------|
+| `CRM_ADMIN_EMAIL` | `info@dvgsstudio.com` |
+| `CRM_ADMIN_PASSWORD_HASH` | hash bcrypt (del script) |
+| `NEXTAUTH_SECRET` | `openssl rand -base64 32` |
+| `NEXTAUTH_URL` | `https://crm.dvgsstudio.com` |
+
+Tras `db:push`, ejecuta el seed para guardar el usuario en la base de datos.
 
 ---
 
@@ -75,10 +88,8 @@ Usa el resultado para:
 | `DATABASE_URL` | URL del paso 1 |
 | `NEXTAUTH_URL` | `https://tu-proyecto.vercel.app` |
 | `NEXTAUTH_SECRET` | del paso 3 |
-| `GOOGLE_CLIENT_ID` | del paso 2 |
-| `GOOGLE_CLIENT_SECRET` | del paso 2 |
-| `CRM_ALLOWED_EMAILS` | `tu@gmail.com,otro@empresa.com` |
-| `CRM_ADMIN_EMAIL` | `tu@gmail.com` |
+| `CRM_ADMIN_EMAIL` | `info@dvgsstudio.com` |
+| `CRM_ADMIN_PASSWORD_HASH` | del paso 2 |
 | `CRM_INGEST_SECRET` | del paso 3 |
 
 4. Deploy
@@ -86,12 +97,10 @@ Usa el resultado para:
    ```bash
    cd ~/Documents/dvg-crm
    cp .env.example .env.local
-   # edita .env.local con DATABASE_URL
+   # edita .env.local con DATABASE_URL y CRM_ADMIN_PASSWORD_HASH
    npx prisma db push
+   CRM_ADMIN_PASSWORD='tu-pass' node scripts/seed-admin.js
    ```
-   O desde tu Mac con la URL de RDS: `npx prisma db push`
-
-6. Vuelve a Google OAuth y añade la redirect URI real de Vercel si no la tenías
 
 ---
 
@@ -110,7 +119,7 @@ Redeploy la landing.
 
 ## Paso 6 — Probar
 
-1. Abre `https://tu-proyecto.vercel.app` → login con Google
+1. Abre `https://tu-proyecto.vercel.app` → login con email y contraseña
 2. En la web, pide una guía de planes con un email de prueba
 3. En el CRM → **Leads** debe aparecer el contacto
 4. Gmail: sigues recibiendo aviso en `BOOKING_NOTIFY_EMAIL` (configuración actual)
@@ -122,7 +131,7 @@ Redeploy la landing.
 1. Vercel → proyecto CRM → Settings → Domains → añade `crm.dvgsstudio.com`
 2. En tu DNS (donde gestionas dvgsstudio.com), CNAME:
    - `crm` → `cname.vercel-dns.com`
-3. Actualiza `NEXTAUTH_URL` y la redirect URI de Google OAuth
+3. Actualiza `NEXTAUTH_URL` a `https://crm.dvgsstudio.com`
 
 ---
 
@@ -138,10 +147,10 @@ Redeploy la landing.
 
 ## Si algo falla
 
-- **No puedo entrar al CRM:** revisa `CRM_ALLOWED_EMAILS` incluye tu Gmail exacto
+- **No puedo entrar al CRM:** revisa `CRM_ADMIN_EMAIL` y `CRM_ADMIN_PASSWORD_HASH` en Vercel
 - **Leads no aparecen:** revisa `CRM_API_URL` y que `CRM_INGEST_SECRET` sea igual en landing y CRM
 - **Error de base de datos:** security group RDS puerto 5432 abierto + `sslmode=require`
-- **Login Google falla:** redirect URI debe coincidir exactamente con `NEXTAUTH_URL`
+- **Demasiados intentos:** espera 15 min o revisa bloqueo de cuenta (10 fallos = 30 min)
 
 ---
 
