@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toggleTask, updateTask, deleteTask } from "@/app/actions";
 import AssigneeBadge from "@/components/AssigneeBadge";
-
 import { TASK_PRIORITIES } from "@/lib/constants";
+import { taskDueStatus, dueLabel } from "@/lib/crm-utils";
 
 function priorityClass(p) {
   if (p === "HIGH") return "priority-high";
@@ -14,24 +14,66 @@ function priorityClass(p) {
   return "priority-medium";
 }
 
-function dueClass(dueAt, done) {
-  if (done || !dueAt) return "";
-  const d = new Date(dueAt);
-  const now = new Date();
-  if (d < now) return "task-due--overdue";
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  if (d <= tomorrow) return "task-due--soon";
+function rowDueClass(dueAt, done) {
+  const s = taskDueStatus(dueAt, done);
+  if (s === "overdue") return "task-due--overdue";
+  if (s === "today" || s === "tomorrow") return "task-due--soon";
   return "";
 }
 
-export default function TaskList({ tasks, team, isAdmin, embedded = false, showContact = true }) {
+function TaskRowContent({ t, isAdmin, team, showContact, onEdit, onRemove }) {
+  const due = taskDueStatus(t.dueAt, t.done);
+  const badge = dueLabel(due);
+
+  return (
+    <>
+      <label>
+        {t.title}{" "}
+        <span className={`priority-pill ${priorityClass(t.priority)}`}>
+          {TASK_PRIORITIES.find((p) => p.id === t.priority)?.label || "Media"}
+        </span>
+        {t.recurDays ? (
+          <span className="recur-pill">↻ {t.recurDays}d</span>
+        ) : null}
+      </label>
+      {badge && !t.done && (
+        <span className={`due-badge due-badge--${due}`}>{badge}</span>
+      )}
+      {t.dueAt && (
+        <small className={rowDueClass(t.dueAt, t.done)}>
+          {new Date(t.dueAt).toLocaleString("es-ES")}
+        </small>
+      )}
+      {t.assignee && <AssigneeBadge user={t.assignee} />}
+      {showContact && t.contact && (
+        <Link href={`/leads/${t.contactId}`}>{t.contact.name}</Link>
+      )}
+      <div className="task-actions">
+        <button type="button" className="btn-sm btn-ghost" onClick={onEdit}>
+          Editar
+        </button>
+        <button type="button" className="btn-sm btn-danger" onClick={onRemove}>
+          Borrar
+        </button>
+      </div>
+    </>
+  );
+}
+
+export default function TaskList({
+  tasks,
+  team,
+  isAdmin,
+  embedded = false,
+  showContact = true,
+}) {
   const router = useRouter();
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDue, setEditDue] = useState("");
   const [editAssignee, setEditAssignee] = useState("");
   const [editPriority, setEditPriority] = useState("MEDIUM");
+  const [editRecur, setEditRecur] = useState("");
 
   function startEdit(t) {
     setEditingId(t.id);
@@ -39,6 +81,7 @@ export default function TaskList({ tasks, team, isAdmin, embedded = false, showC
     setEditDue(t.dueAt ? new Date(t.dueAt).toISOString().slice(0, 16) : "");
     setEditAssignee(t.assigneeId || "");
     setEditPriority(t.priority || "MEDIUM");
+    setEditRecur(t.recurDays ? String(t.recurDays) : "");
   }
 
   async function saveEdit(taskId) {
@@ -47,6 +90,7 @@ export default function TaskList({ tasks, team, isAdmin, embedded = false, showC
       dueAt: editDue || null,
       assigneeId: isAdmin ? editAssignee || null : undefined,
       priority: editPriority,
+      recurDays: editRecur || null,
     });
     setEditingId(null);
     router.refresh();
@@ -61,7 +105,10 @@ export default function TaskList({ tasks, team, isAdmin, embedded = false, showC
   return (
     <div className={embedded ? "task-list-inner" : "card task-list-card"}>
       {tasks.map((t) => (
-        <div key={t.id} className={`task-row${t.done ? " task-row--done" : ""} ${dueClass(t.dueAt, t.done)}`}>
+        <div
+          key={t.id}
+          className={`task-row${t.done ? " task-row--done" : ""} ${rowDueClass(t.dueAt, t.done)}`}
+        >
           <input
             type="checkbox"
             checked={t.done}
@@ -91,6 +138,14 @@ export default function TaskList({ tasks, team, isAdmin, embedded = false, showC
                   </option>
                 ))}
               </select>
+              <input
+                type="number"
+                min="1"
+                placeholder="Repetir días"
+                value={editRecur}
+                onChange={(e) => setEditRecur(e.target.value)}
+                className="task-edit-input"
+              />
               {isAdmin && (
                 <select
                   value={editAssignee}
@@ -108,36 +163,23 @@ export default function TaskList({ tasks, team, isAdmin, embedded = false, showC
               <button type="button" className="btn-sm" onClick={() => saveEdit(t.id)}>
                 Guardar
               </button>
-              <button type="button" className="btn-sm btn-ghost" onClick={() => setEditingId(null)}>
+              <button
+                type="button"
+                className="btn-sm btn-ghost"
+                onClick={() => setEditingId(null)}
+              >
                 Cancelar
               </button>
             </div>
           ) : (
-            <>
-              <label>
-                {t.title}{" "}
-                <span className={`priority-pill ${priorityClass(t.priority)}`}>
-                  {TASK_PRIORITIES.find((p) => p.id === t.priority)?.label || "Media"}
-                </span>
-              </label>
-              {t.dueAt && (
-                <small className={dueClass(t.dueAt, t.done)}>
-                  {new Date(t.dueAt).toLocaleString("es-ES")}
-                </small>
-              )}
-              {t.assignee && <AssigneeBadge user={t.assignee} />}
-              {showContact && t.contact && (
-                <Link href={`/leads/${t.contactId}`}>{t.contact.name}</Link>
-              )}
-              <div className="task-actions">
-                <button type="button" className="btn-sm btn-ghost" onClick={() => startEdit(t)}>
-                  Editar
-                </button>
-                <button type="button" className="btn-sm btn-danger" onClick={() => remove(t.id)}>
-                  Borrar
-                </button>
-              </div>
-            </>
+            <TaskRowContent
+              t={t}
+              isAdmin={isAdmin}
+              team={team}
+              showContact={showContact}
+              onEdit={() => startEdit(t)}
+              onRemove={() => remove(t.id)}
+            />
           )}
         </div>
       ))}

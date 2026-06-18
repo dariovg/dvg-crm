@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const links = [
   { href: "/dashboard", label: "Resumen" },
   { href: "/leads", label: "Leads" },
   { href: "/pipeline", label: "Pipeline" },
   { href: "/tasks", label: "Tareas" },
+  { href: "/calendar", label: "Calendario" },
 ];
 
 export default function Sidebar() {
@@ -33,6 +35,10 @@ export default function Sidebar() {
         )}
       </nav>
       <div className="sidebar-foot">
+        <ThemeToggle />
+        <p className="shortcuts-hint">
+          <kbd>?</kbd> atajos · <kbd>⌘K</kbd> buscar
+        </p>
         {isAdmin && (
           <a href="/api/export/leads" className="sidebar-link export-link">
             Exportar CSV

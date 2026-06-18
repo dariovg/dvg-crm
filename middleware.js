@@ -9,6 +9,7 @@ export const config = {
     "/dashboard/:path*",
     "/leads/:path*",
     "/pipeline/:path*",
+    "/calendar/:path*",
     "/tasks/:path*",
     "/admin/:path*",
     "/api/export/:path*",

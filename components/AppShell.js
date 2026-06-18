@@ -3,6 +3,7 @@
 import { SessionProvider } from "next-auth/react";
 import Sidebar from "@/components/Sidebar";
 import GlobalSearch from "@/components/GlobalSearch";
+import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 
 export default function AppShell({ children }) {
   return (
@@ -16,6 +17,7 @@ export default function AppShell({ children }) {
           {children}
         </main>
       </div>
+      <KeyboardShortcuts />
     </SessionProvider>
   );
 }

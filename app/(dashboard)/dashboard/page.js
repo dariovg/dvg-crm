@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { CONTACT_STATUSES, FUNNEL_STAGES } from "@/lib/constants";
 import { getAuthSession, listTeamUsers } from "@/lib/auth-server";
 import { contactScope, taskScope, isStaff } from "@/lib/permissions";
+import { computeStageDurations, taskDueStatus } from "@/lib/crm-utils";
 import DashboardView from "@/components/DashboardView";
 
 export default async function DashboardPage() {
@@ -23,6 +24,8 @@ export default async function DashboardPage() {
     weeklyEvents,
     weeklyTasks,
     teamUsers,
+    statusEvents,
+    openTasks,
   ] = await Promise.all([
     prisma.contact.count({ where: scope }),
     prisma.contact.groupBy({
@@ -63,6 +66,17 @@ export default async function DashboardPage() {
           select: { id: true, name: true, email: true },
         })
       : Promise.resolve([]),
+    prisma.contactEvent.findMany({
+      where: { type: "status_changed", contact: scope },
+      orderBy: { createdAt: "asc" },
+      include: {
+        contact: { select: { status: true, createdAt: true } },
+      },
+    }),
+    prisma.task.findMany({
+      where: taskWhere,
+      select: { dueAt: true, done: true },
+    }),
   ]);
 
   const counts = Object.fromEntries(
@@ -97,6 +111,16 @@ export default async function DashboardPage() {
     return { id, label: meta?.label || id, count: counts[id] || 0 };
   });
 
+  const stageDurations = computeStageDurations(statusEvents);
+
+  let overdue = 0;
+  let dueToday = 0;
+  for (const t of openTasks) {
+    const s = taskDueStatus(t.dueAt, false);
+    if (s === "overdue") overdue++;
+    if (s === "today") dueToday++;
+  }
+
   const stats = {
     total,
     newCount: counts.NEW || 0,
@@ -124,6 +148,8 @@ export default async function DashboardPage() {
         statusChanges: weeklyEvents,
         tasksDone: weeklyTasks,
       }}
+      stageDurations={stageDurations}
+      taskReminders={{ overdue, dueToday }}
     />
   );
 }

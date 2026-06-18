@@ -14,6 +14,43 @@ import {
   contactScope,
   isStaff,
 } from "@/lib/permissions";
+import { notifyAssignment } from "@/lib/mail";
+
+function appUrl() {
+  return (
+    process.env.NEXTAUTH_URL ||
+    process.env.CRM_APP_URL ||
+    "https://crm.dvgsstudio.com"
+  ).replace(/\/$/, "");
+}
+
+async function mailAssignee(assignee, type, title, path) {
+  if (!assignee?.email) return;
+  await notifyAssignment({
+    assigneeEmail: assignee.email,
+    assigneeName: assignee.name,
+    type,
+    title,
+    link: `${appUrl()}${path}`,
+  });
+}
+
+async function spawnRecurringTask(task) {
+  if (!task.recurDays || task.recurDays < 1) return;
+  const base = task.dueAt ? new Date(task.dueAt) : new Date();
+  const nextDue = new Date(base);
+  nextDue.setDate(nextDue.getDate() + task.recurDays);
+  await prisma.task.create({
+    data: {
+      contactId: task.contactId,
+      title: task.title,
+      assigneeId: task.assigneeId,
+      priority: task.priority,
+      recurDays: task.recurDays,
+      dueAt: nextDue,
+    },
+  });
+}
 
 function actorId(session) {
   return session.user.id !== "env-admin" ? session.user.id : null;
@@ -163,6 +200,18 @@ export async function assignContact(contactId, assigneeId) {
       userId: actorId(session),
     },
   });
+  if (assignee && assignee.id !== actorId(session)) {
+    const contact = await prisma.contact.findUnique({
+      where: { id: contactId },
+      select: { name: true },
+    });
+    await mailAssignee(
+      assignee,
+      "lead",
+      contact?.name || "Lead",
+      `/leads/${contactId}`
+    );
+  }
   revalidatePath("/leads");
   revalidatePath("/pipeline");
   revalidatePath("/dashboard");
@@ -194,6 +243,13 @@ export async function bulkAssignContacts(contactIds, assigneeId) {
         userId: actorId(session),
       },
     });
+    if (assignee && assignee.id !== actorId(session)) {
+      const c = await prisma.contact.findUnique({
+        where: { id },
+        select: { name: true },
+      });
+      await mailAssignee(assignee, "lead", c?.name || "Lead", `/leads/${id}`);
+    }
   }
   revalidatePath("/leads");
   revalidatePath("/pipeline");
@@ -203,25 +259,41 @@ export async function updateContactNotes(contactId, notes) {
   return updateContactDetails(contactId, { notes });
 }
 
-export async function createTask(contactId, title, dueAt, assigneeId, priority) {
+export async function createTask(
+  contactId,
+  title,
+  dueAt,
+  assigneeId,
+  priority,
+  recurDays
+) {
   const session = await requireAuthSession();
   await getContactForUser(session, contactId);
   const targetAssignee =
-    isStaff(session) && assigneeId
-      ? assigneeId
-      : actorId(session);
+    isStaff(session) && assigneeId ? assigneeId : actorId(session);
 
-  await prisma.task.create({
+  const task = await prisma.task.create({
     data: {
       contactId,
       title,
       dueAt: dueAt ? new Date(dueAt) : null,
       assigneeId: targetAssignee,
       priority: priority || "MEDIUM",
+      recurDays: recurDays ? parseInt(recurDays, 10) : null,
     },
   });
+
+  if (targetAssignee && targetAssignee !== actorId(session)) {
+    const assignee = await prisma.user.findUnique({
+      where: { id: targetAssignee },
+    });
+    await mailAssignee(assignee, "task", title, `/leads/${contactId}`);
+  }
+
   revalidatePath("/tasks");
+  revalidatePath("/calendar");
   revalidatePath(`/leads/${contactId}`);
+  return task;
 }
 
 export async function toggleTask(taskId, done) {
@@ -232,10 +304,15 @@ export async function toggleTask(taskId, done) {
     where: { id: taskId },
     data: { done },
   });
+  if (done && task.recurDays) {
+    await spawnRecurringTask(task);
+  }
   revalidatePath("/tasks");
+  revalidatePath("/calendar");
+  revalidatePath("/dashboard");
 }
 
-export async function updateTask(taskId, { title, dueAt, assigneeId, done, priority }) {
+export async function updateTask(taskId, { title, dueAt, assigneeId, done, priority, recurDays }) {
   const session = await requireAuthSession();
   const task = await prisma.task.findUnique({ where: { id: taskId } });
   if (!task || !canAccessTask(session, task)) throw new Error("No autorizado");
@@ -245,12 +322,27 @@ export async function updateTask(taskId, { title, dueAt, assigneeId, done, prior
   if (dueAt !== undefined) data.dueAt = dueAt ? new Date(dueAt) : null;
   if (done != null) data.done = done;
   if (priority != null) data.priority = priority;
+  if (recurDays !== undefined) {
+    data.recurDays = recurDays ? parseInt(recurDays, 10) : null;
+  }
   if (isStaff(session) && assigneeId !== undefined) {
     data.assigneeId = assigneeId || null;
   }
 
   await prisma.task.update({ where: { id: taskId }, data });
+
+  if (isStaff(session) && assigneeId && assigneeId !== task.assigneeId) {
+    const assignee = await prisma.user.findUnique({ where: { id: assigneeId } });
+    await mailAssignee(
+      assignee,
+      "task",
+      title || task.title,
+      `/leads/${task.contactId}`
+    );
+  }
+
   revalidatePath("/tasks");
+  revalidatePath("/calendar");
   revalidatePath(`/leads/${task.contactId}`);
 }
 
@@ -260,6 +352,7 @@ export async function deleteTask(taskId) {
   if (!task || !canAccessTask(session, task)) throw new Error("No autorizado");
   await prisma.task.delete({ where: { id: taskId } });
   revalidatePath("/tasks");
+  revalidatePath("/calendar");
   revalidatePath(`/leads/${task.contactId}`);
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createManualContact } from "@/app/actions";
 import Link from "next/link";
 
@@ -24,6 +24,16 @@ export default function NewLeadForm({ team, canAssign }) {
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
   }
+
+  useEffect(() => {
+    function openForm() {
+      setOpen(true);
+    }
+    window.addEventListener("crm:new-lead", openForm);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("new") === "1") setOpen(true);
+    return () => window.removeEventListener("crm:new-lead", openForm);
+  }, []);
 
   async function submit(allowDuplicate = false) {
     setPending(true);

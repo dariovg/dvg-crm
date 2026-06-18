@@ -153,6 +153,7 @@ model Task {
   assigneeId String?
   assignee   User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
   priority   TaskPriority @default(MEDIUM)
+  recurDays  Int?
 
   @@index([contactId])
   @@index([dueAt])

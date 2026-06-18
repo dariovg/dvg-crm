@@ -1,6 +1,6 @@
 import Link from "next/link";
 import StatusBadge from "@/components/StatusBadge";
-import { FUNNEL_STAGES } from "@/lib/constants";
+import TaskRemindersBanner from "@/components/TaskRemindersBanner";
 
 export default function DashboardView({
   stats,
@@ -10,9 +10,12 @@ export default function DashboardView({
   memberStats,
   funnel,
   weekly,
+  stageDurations,
+  taskReminders,
 }) {
   const maxPipeline = Math.max(...stats.byStatus.map((s) => s.count), 1);
   const maxFunnel = Math.max(...funnel.map((f) => f.count), 1);
+  const maxStage = Math.max(...(stageDurations || []).map((s) => s.avgDays), 1);
 
   return (
     <>
@@ -29,6 +32,13 @@ export default function DashboardView({
           Ver leads
         </Link>
       </header>
+
+      {taskReminders && (
+        <TaskRemindersBanner
+          overdue={taskReminders.overdue}
+          dueToday={taskReminders.dueToday}
+        />
+      )}
 
       <div className="dash-kpis">
         <div className="dash-kpi dash-kpi--accent">
@@ -132,6 +142,27 @@ export default function DashboardView({
           </ul>
         </div>
       </div>
+
+      {stageDurations?.length > 0 && (
+        <div className="card">
+          <h2>Tiempo medio por etapa</h2>
+          <ul className="pipeline-bars">
+            {stageDurations.map((s) => (
+              <li key={s.id}>
+                <span className="pipeline-bars-label">{s.label}</span>
+                <div className="pipeline-bars-track">
+                  <div
+                    className="pipeline-bars-fill"
+                    data-status={s.id}
+                    style={{ width: `${(s.avgDays / maxStage) * 100}%` }}
+                  />
+                </div>
+                <span className="pipeline-bars-num">{s.avgDays} d</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {isStaff && memberStats?.length > 0 && (
         <div className="card">

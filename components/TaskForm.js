@@ -11,6 +11,7 @@ export default function TaskForm({ contactId, team = [], canAssign = false }) {
   const [dueAt, setDueAt] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [priority, setPriority] = useState("MEDIUM");
+  const [recurDays, setRecurDays] = useState("");
 
   async function submit(e) {
     e.preventDefault();
@@ -20,12 +21,14 @@ export default function TaskForm({ contactId, team = [], canAssign = false }) {
       title.trim(),
       dueAt || null,
       canAssign ? assigneeId || null : undefined,
-      priority
+      priority,
+      recurDays || null
     );
     setTitle("");
     setDueAt("");
     setAssigneeId("");
     setPriority("MEDIUM");
+    setRecurDays("");
     router.refresh();
   }
 
@@ -56,6 +59,16 @@ export default function TaskForm({ contactId, team = [], canAssign = false }) {
           type="datetime-local"
           value={dueAt}
           onChange={(e) => setDueAt(e.target.value)}
+        />
+      </div>
+      <div className="field">
+        <label>Repetir cada (días, opcional)</label>
+        <input
+          type="number"
+          min="1"
+          placeholder="Ej. 7"
+          value={recurDays}
+          onChange={(e) => setRecurDays(e.target.value)}
         />
       </div>
       {canAssign && (
