@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyIngestSecret, recordBooking } from "@/lib/ingest";
+import { verifyIngestSecret, recordBooking, cleanPhone } from "@/lib/ingest";
 
 export async function POST(req) {
   if (!verifyIngestSecret(req)) {
@@ -17,10 +17,15 @@ export async function POST(req) {
       return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
     }
 
+    const phone = cleanPhone(body.phone);
+    if (!phone) {
+      return NextResponse.json({ error: "Teléfono requerido" }, { status: 400 });
+    }
+
     const contact = await recordBooking({
       name,
       email,
-      phone: body.phone || null,
+      phone,
       company: body.company || null,
       date,
       time,

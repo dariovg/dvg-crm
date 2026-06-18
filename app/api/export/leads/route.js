@@ -3,14 +3,23 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { STATUS_LABEL, SOURCE_LABEL } from "@/lib/constants";
+import { isAdmin } from "@/lib/permissions";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!session) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+  if (!isAdmin(session)) {
+    return NextResponse.json({ error: "Solo administración" }, { status: 403 });
+  }
 
   const contacts = await prisma.contact.findMany({
     orderBy: { createdAt: "desc" },
-    include: { meetings: { orderBy: { createdAt: "desc" }, take: 1 } },
+    include: {
+      meetings: { orderBy: { createdAt: "desc" }, take: 1 },
+      assignee: { select: { email: true, name: true } },
+    },
   });
 
   const header = [
@@ -22,6 +31,7 @@ export async function GET() {
     "estado",
     "origen",
     "interes",
+    "asignado_a",
     "creado",
     "proxima_cita",
   ];
@@ -35,6 +45,7 @@ export async function GET() {
     STATUS_LABEL[c.status] || c.status,
     SOURCE_LABEL[c.source] || c.source,
     c.interest || "",
+    c.assignee ? c.assignee.name || c.assignee.email : "",
     c.createdAt.toISOString(),
     c.meetings[0] ? `${c.meetings[0].date} ${c.meetings[0].time}` : "",
   ]);

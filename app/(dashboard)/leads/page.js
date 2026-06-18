@@ -1,53 +1,35 @@
-import Link from "next/link";
-import { prisma } from "@/lib/prisma";
-import StatusBadge from "@/components/StatusBadge";
-import { SOURCE_LABEL } from "@/lib/constants";
+import { Suspense } from "react";
+import { fetchScopedContacts } from "@/app/actions";
+import { getAuthSession, listTeamUsers } from "@/lib/auth-server";
+import { isAdmin } from "@/lib/permissions";
+import LeadsFilters, { LeadsTable } from "@/components/LeadsTable";
 
-export default async function LeadsPage() {
-  const contacts = await prisma.contact.findMany({
-    orderBy: { createdAt: "desc" },
-    include: { meetings: { orderBy: { createdAt: "desc" }, take: 1 } },
+export default async function LeadsPage({ searchParams }) {
+  const params = await searchParams;
+  const session = await getAuthSession();
+  const admin = isAdmin(session);
+  const team = admin ? await listTeamUsers() : [];
+
+  const contacts = await fetchScopedContacts({
+    status: params.status || undefined,
+    source: params.source || undefined,
+    assigneeId: params.assignee || undefined,
+    q: params.q || undefined,
   });
 
   return (
     <>
       <h1 className="page-title">Leads</h1>
-      <p className="page-lead">{contacts.length} contactos en el CRM.</p>
+      <p className="page-lead">
+        {contacts.length} contacto{contacts.length !== 1 ? "s" : ""}
+        {admin ? " · Vista global" : " · Asignados a ti"}
+      </p>
 
-      <div className="table-wrap">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Email</th>
-              <th>Empresa</th>
-              <th>Teléfono</th>
-              <th>Estado</th>
-              <th>Origen</th>
-              <th>Interés</th>
-              <th>Creado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contacts.map((c) => (
-              <tr key={c.id}>
-                <td>
-                  <Link href={`/leads/${c.id}`}>{c.name}</Link>
-                </td>
-                <td>{c.email}</td>
-                <td>{c.company || "—"}</td>
-                <td>{c.phone || "—"}</td>
-                <td>
-                  <StatusBadge status={c.status} />
-                </td>
-                <td>{SOURCE_LABEL[c.source] || c.source}</td>
-                <td>{c.interest || "—"}</td>
-                <td>{c.createdAt.toLocaleDateString("es-ES")}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Suspense fallback={<div className="filters-bar">Cargando filtros…</div>}>
+        <LeadsFilters team={team} isAdmin={admin} />
+      </Suspense>
+
+      <LeadsTable contacts={contacts} team={team} isAdmin={admin} />
     </>
   );
 }

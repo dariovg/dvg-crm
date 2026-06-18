@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyIngestSecret, upsertContactFromLead } from "@/lib/ingest";
+import { verifyIngestSecret, upsertContactFromLead, cleanPhone } from "@/lib/ingest";
 
 export async function POST(req) {
   if (!verifyIngestSecret(req)) {
@@ -18,7 +18,7 @@ export async function POST(req) {
       name,
       email,
       company: body.company || null,
-      phone: body.phone || null,
+      phone: body.phone ? cleanPhone(body.phone) : null,
       interest: body.interest || "pricing",
       source: "WEB_CHAT",
       eventType: body.emailed ? "guide_sent" : "lead_created",

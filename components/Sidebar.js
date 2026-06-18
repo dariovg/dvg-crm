@@ -10,6 +10,7 @@ const links = [
 
 export default function Sidebar() {
   const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
 
   return (
     <aside className="sidebar">
@@ -25,13 +26,23 @@ export default function Sidebar() {
         ))}
       </nav>
       <div className="sidebar-foot">
-        <a href="/api/export/leads" className="sidebar-link export-link">
-          Exportar CSV
-        </a>
+        {isAdmin && (
+          <a href="/api/export/leads" className="sidebar-link export-link">
+            Exportar CSV
+          </a>
+        )}
         {session?.user && (
           <div className="sidebar-user">
             <p>{session.user.name || session.user.email}</p>
-            <button type="button" onClick={() => signOut({ callbackUrl: "/login" })}>
+            <span
+              className={`role-badge${isAdmin ? " role-badge--admin" : ""}`}
+            >
+              {isAdmin ? "Administración" : "Equipo"}
+            </span>
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+            >
               Salir
             </button>
           </div>

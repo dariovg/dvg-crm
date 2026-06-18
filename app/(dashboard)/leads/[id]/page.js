@@ -1,29 +1,50 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import StatusBadge from "@/components/StatusBadge";
+import AssigneeBadge from "@/components/AssigneeBadge";
 import ContactEditor from "@/components/ContactEditor";
 import TaskForm from "@/components/TaskForm";
+import TaskList from "@/components/TaskList";
 import { SOURCE_LABEL } from "@/lib/constants";
+import { getAuthSession, listTeamUsers } from "@/lib/auth-server";
+import { canAccessContact, isAdmin } from "@/lib/permissions";
 
 export default async function LeadDetailPage({ params }) {
   const { id } = await params;
+  const session = await getAuthSession();
+  const admin = isAdmin(session);
+
   const contact = await prisma.contact.findUnique({
     where: { id },
     include: {
+      assignee: { select: { id: true, email: true, name: true, role: true } },
       events: { orderBy: { createdAt: "desc" }, include: { user: true } },
       meetings: { orderBy: { createdAt: "desc" } },
-      tasks: { orderBy: { createdAt: "desc" } },
+      tasks: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          assignee: { select: { id: true, email: true, name: true, role: true } },
+        },
+      },
       surveys: { orderBy: { createdAt: "desc" }, take: 3 },
     },
   });
 
-  if (!contact) notFound();
+  if (!contact || !canAccessContact(session, contact)) notFound();
+
+  const team = admin ? await listTeamUsers() : [];
 
   return (
     <>
       <h1 className="page-title">{contact.name}</h1>
-      <p className="page-lead">
+      <p className="page-lead lead-detail-meta">
         <StatusBadge status={contact.status} /> · {SOURCE_LABEL[contact.source]}
+        {contact.assignee && (
+          <>
+            {" "}
+            · <AssigneeBadge user={contact.assignee} />
+          </>
+        )}
       </p>
 
       <div className="detail-grid">
@@ -43,7 +64,8 @@ export default async function LeadDetailPage({ params }) {
               <strong>Interés:</strong> {contact.interest || "—"}
             </p>
             <p>
-              <strong>Alta:</strong> {contact.createdAt.toLocaleString("es-ES")}
+              <strong>Alta:</strong>{" "}
+              {contact.createdAt.toLocaleString("es-ES")}
             </p>
           </div>
 
@@ -53,7 +75,9 @@ export default async function LeadDetailPage({ params }) {
               <ul className="timeline">
                 {contact.meetings.map((m) => (
                   <li key={m.id}>
-                    <time>{m.date} · {m.time}</time>
+                    <time>
+                      {m.date} · {m.time}
+                    </time>
                     {m.meetUrl && (
                       <a href={m.meetUrl} target="_blank" rel="noreferrer">
                         Google Meet
@@ -73,7 +97,9 @@ export default async function LeadDetailPage({ params }) {
                 <li key={ev.id}>
                   <time>{ev.createdAt.toLocaleString("es-ES")}</time>
                   {ev.summary}
-                  {ev.user?.name && <div style={{ fontSize: ".78rem", color: "#8b93a8" }}>por {ev.user.name}</div>}
+                  {ev.user?.name && (
+                    <div className="timeline-user">por {ev.user.name}</div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -81,16 +107,18 @@ export default async function LeadDetailPage({ params }) {
         </div>
 
         <div>
-          <ContactEditor contact={contact} />
-          <TaskForm contactId={contact.id} />
+          <ContactEditor contact={contact} team={team} isAdmin={admin} />
+          <TaskForm contactId={contact.id} team={team} isAdmin={admin} />
           {contact.tasks.length > 0 && (
-            <div className="card">
-              <h2>Tareas</h2>
-              {contact.tasks.map((t) => (
-                <div key={t.id} className="task-row">
-                  <span style={{ textDecoration: t.done ? "line-through" : "none" }}>{t.title}</span>
-                </div>
-              ))}
+            <div className="card task-list-card">
+              <h2>Tareas del lead</h2>
+              <TaskList
+                tasks={contact.tasks}
+                team={team}
+                isAdmin={admin}
+                embedded
+                showContact={false}
+              />
             </div>
           )}
         </div>
