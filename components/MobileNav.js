@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { NAV_LINKS, TAB_LINKS } from "@/lib/nav-links";
 import { isStaff } from "@/lib/permissions";
+import ThemeToggle from "@/components/ThemeToggle";
 
 function NavIcon({ name }) {
   const icons = {
@@ -143,6 +144,7 @@ export function MobileDrawer({ open, onClose }) {
           )}
         </nav>
         <div className="mobile-drawer-foot">
+          <ThemeToggle className="theme-toggle--sidebar" />
           {isAdmin && (
             <a href="/api/export/leads" className="mobile-drawer-link export-link" onClick={handleLinkClick}>
               Exportar CSV

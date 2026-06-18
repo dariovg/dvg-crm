@@ -2,6 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import { useState } from "react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 function LockIcon() {
   return (
@@ -107,6 +108,7 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
+      <ThemeToggle compact className="login-theme-toggle" />
       <div className="login-bg-glow login-bg-glow--left" />
       <div className="login-bg-glow login-bg-glow--right" />
 

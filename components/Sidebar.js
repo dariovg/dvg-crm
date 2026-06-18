@@ -2,6 +2,7 @@ import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { NAV_LINKS } from "@/lib/nav-links";
 import { isStaff } from "@/lib/permissions";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Sidebar() {
   const { data: session } = useSession();
@@ -39,6 +40,7 @@ export default function Sidebar() {
         )}
       </nav>
       <div className="sidebar-foot">
+        <ThemeToggle className="theme-toggle--sidebar" />
         <p className="shortcuts-hint">
           <kbd>?</kbd> atajos · <kbd>⌘K</kbd> buscar
         </p>
