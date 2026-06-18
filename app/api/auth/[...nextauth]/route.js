@@ -1,25 +1,36 @@
 import NextAuth from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
 
 export const authOptions = {
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        // Credenciales hardcodeadas
+        if (
+          credentials?.email === "info@dvgsstudio.com" &&
+          credentials?.password === "Informatica97"
+        ) {
+          return {
+            id: "1",
+            email: "info@dvgsstudio.com",
+            name: "DVG CRM Admin",
+          };
+        }
+        // Acceso denegado
+        return null;
+      },
     }),
   ],
   pages: {
     signIn: "/login",
   },
-  callbacks: {
-    async signIn({ user }) {
-      // Hardcoded allowed emails
-      const allowedEmails = ["info@dvgsstudio.com", "dariovillarrealguillo@gmail.com"];
-      return allowedEmails.includes(user.email.toLowerCase());
-    },
-    async session({ session }) {
-      return session;
-    },
+  session: {
+    strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
