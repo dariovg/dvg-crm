@@ -11,12 +11,24 @@ import {
 import {
   canAccessContact,
   canAccessTask,
+  canAccessQuote,
+  canApproveQuote,
+  canEditQuote,
   contactScope,
   isStaff,
+  quoteScope,
 } from "@/lib/permissions";
 import { notifyAssignment } from "@/lib/mail";
 import { pushNotification } from "@/lib/notifications";
 import { generateTotpSecret, getTotpUri, verifyTotpToken } from "@/lib/totp";
+import {
+  catalogPriceForPack,
+  computeQuoteTotal,
+  generateQuoteNumber,
+  needsApproval,
+  packLineDescription,
+} from "@/lib/quotes";
+import { planById } from "@/lib/pricing-catalog";
 
 function appUrl() {
   return (
@@ -609,3 +621,425 @@ export async function disableTotp() {
   });
   revalidatePath("/admin/security");
 }
+
+// ——— Presupuestos ———
+
+async function getQuoteForUser(session, quoteId) {
+  const quote = await prisma.quote.findUnique({
+    where: { id: quoteId },
+    include: {
+      contact: true,
+      lines: { orderBy: { sortOrder: "asc" } },
+      createdBy: { select: { id: true, name: true, email: true } },
+    },
+  });
+  if (!quote || !canAccessQuote(session, quote)) {
+    throw new Error("No autorizado");
+  }
+  return quote;
+}
+
+function defaultValidUntil() {
+  const d = new Date();
+  d.setDate(d.getDate() + 30);
+  return d;
+}
+
+async function notifyAdminsQuotePending(quote) {
+  const admins = await prisma.user.findMany({
+    where: { role: "ADMIN" },
+    select: { id: true },
+  });
+  const link = `/presupuestos/${quote.id}`;
+  const title = `Presupuesto ${quote.number} pendiente de aprobación`;
+  const body = `${quote.contact?.name || "Cliente"} — precio pack por debajo del catálogo`;
+  for (const admin of admins) {
+    await pushNotification(admin.id, {
+      type: "quote_pending",
+      title,
+      body,
+      link,
+    });
+  }
+}
+
+async function syncQuoteLines(quoteId, lines) {
+  await prisma.quoteLine.deleteMany({ where: { quoteId } });
+  if (!lines?.length) return;
+  await prisma.quoteLine.createMany({
+    data: lines.map((line, i) => ({
+      quoteId,
+      type: line.type || "CUSTOM",
+      description: line.description,
+      quantity: line.quantity ?? 1,
+      unitPrice: line.unitPrice,
+      discountPercent: line.discountPercent ?? null,
+      sortOrder: line.sortOrder ?? i,
+      packId: line.packId ?? null,
+    })),
+  });
+}
+
+function revalidateQuotePaths(quoteId, contactId) {
+  revalidatePath("/presupuestos");
+  revalidatePath(`/presupuestos/${quoteId}`);
+  revalidatePath(`/presupuestos/${quoteId}/pdf`);
+  if (contactId) revalidatePath(`/leads/${contactId}`);
+}
+
+export async function createQuote(contactId, { packId, billing = "MONTHLY", customLines = [] } = {}) {
+  const session = await requireAuthSession();
+  await getContactForUser(session, contactId);
+
+  const number = await generateQuoteNumber(prisma);
+  const lines = [];
+
+  if (packId) {
+    const price = catalogPriceForPack(packId, billing);
+    lines.push({
+      type: "PACK",
+      packId,
+      description: packLineDescription(packId),
+      quantity: 1,
+      unitPrice: price,
+      sortOrder: 0,
+    });
+  }
+
+  customLines.forEach((line, i) => {
+    lines.push({
+      type: "CUSTOM",
+      description: line.description,
+      quantity: line.quantity ?? 1,
+      unitPrice: line.unitPrice ?? 0,
+      discountPercent: line.discountPercent ?? null,
+      sortOrder: lines.length + i,
+    });
+  });
+
+  const quote = await prisma.quote.create({
+    data: {
+      number,
+      contactId,
+      createdById: actorId(session),
+      billing,
+      packId: packId || null,
+      validUntil: defaultValidUntil(),
+      lines: { create: lines },
+    },
+    include: { lines: true, contact: true },
+  });
+
+  await prisma.contactEvent.create({
+    data: {
+      contactId,
+      type: "quote_created",
+      summary: `Presupuesto ${number} creado`,
+      userId: actorId(session),
+    },
+  });
+
+  revalidateQuotePaths(quote.id, contactId);
+  return { ok: true, quoteId: quote.id };
+}
+
+export async function updateQuote(quoteId, { lines, billing, notes, discountPercent, packId }) {
+  const session = await requireAuthSession();
+  const quote = await getQuoteForUser(session, quoteId);
+  if (!canEditQuote(session, quote)) throw new Error("No autorizado");
+  if (["SENT", "ACCEPTED"].includes(quote.status)) {
+    throw new Error("No se puede editar un presupuesto enviado o aceptado");
+  }
+
+  const data = {};
+  if (billing !== undefined) data.billing = billing;
+  if (notes !== undefined) data.notes = notes?.trim() || null;
+  if (discountPercent !== undefined) {
+    data.discountPercent =
+      discountPercent === "" || discountPercent == null
+        ? null
+        : parseInt(discountPercent, 10);
+  }
+  if (packId !== undefined) data.packId = packId || null;
+
+  if (Object.keys(data).length) {
+    await prisma.quote.update({ where: { id: quoteId }, data });
+  }
+
+  if (lines) {
+    await syncQuoteLines(quoteId, lines);
+  }
+
+  revalidateQuotePaths(quoteId, quote.contactId);
+  return { ok: true };
+}
+
+export async function saveQuote(quoteId, payload) {
+  const session = await requireAuthSession();
+  if (payload) await updateQuote(quoteId, payload);
+
+  const quote = await getQuoteForUser(session, quoteId);
+  if (!canEditQuote(session, quote)) throw new Error("No autorizado");
+
+  const lines = await prisma.quoteLine.findMany({
+    where: { quoteId },
+    orderBy: { sortOrder: "asc" },
+  });
+
+  const quoteData = { billing: quote.billing, discountPercent: quote.discountPercent };
+  const requiresApproval = needsApproval(quoteData, lines);
+
+  if (requiresApproval && quote.status !== "PENDING_APPROVAL") {
+    await prisma.quote.update({
+      where: { id: quoteId },
+      data: { status: "PENDING_APPROVAL", approvalNote: null },
+    });
+    await notifyAdminsQuotePending({ ...quote, contact: quote.contact });
+  } else if (!requiresApproval && quote.status === "PENDING_APPROVAL") {
+    await prisma.quote.update({
+      where: { id: quoteId },
+      data: { status: "DRAFT" },
+    });
+  }
+
+  revalidateQuotePaths(quoteId, quote.contactId);
+  return { ok: true, needsApproval: requiresApproval };
+}
+
+export async function submitQuoteForApproval(quoteId, payload) {
+  return saveQuote(quoteId, payload);
+}
+
+export async function approveQuote(quoteId) {
+  const session = await requireAuthSession();
+  if (!canApproveQuote(session)) throw new Error("Solo administración");
+
+  const quote = await prisma.quote.findUnique({
+    where: { id: quoteId },
+    include: { contact: true, createdBy: true },
+  });
+  if (!quote) throw new Error("Presupuesto no encontrado");
+  if (quote.status !== "PENDING_APPROVAL") {
+    throw new Error("El presupuesto no está pendiente de aprobación");
+  }
+
+  await prisma.quote.update({
+    where: { id: quoteId },
+    data: {
+      status: "APPROVED",
+      approvedById: actorId(session),
+      approvedAt: new Date(),
+    },
+  });
+
+  if (quote.createdById) {
+    await pushNotification(quote.createdById, {
+      type: "quote_approved",
+      title: `Presupuesto ${quote.number} aprobado`,
+      body: quote.contact?.name || "",
+      link: `/presupuestos/${quoteId}`,
+    });
+  }
+
+  revalidateQuotePaths(quoteId, quote.contactId);
+  return { ok: true };
+}
+
+export async function rejectQuote(quoteId, note) {
+  const session = await requireAuthSession();
+  if (!canApproveQuote(session)) throw new Error("Solo administración");
+
+  const quote = await prisma.quote.findUnique({
+    where: { id: quoteId },
+    include: { contact: true, createdBy: true },
+  });
+  if (!quote) throw new Error("Presupuesto no encontrado");
+  if (quote.status !== "PENDING_APPROVAL") {
+    throw new Error("El presupuesto no está pendiente de aprobación");
+  }
+
+  await prisma.quote.update({
+    where: { id: quoteId },
+    data: {
+      status: "REJECTED",
+      approvalNote: note?.trim() || "Rechazado por administración",
+    },
+  });
+
+  if (quote.createdById) {
+    await pushNotification(quote.createdById, {
+      type: "quote_rejected",
+      title: `Presupuesto ${quote.number} rechazado`,
+      body: note?.trim() || "",
+      link: `/presupuestos/${quoteId}`,
+    });
+  }
+
+  revalidateQuotePaths(quoteId, quote.contactId);
+  return { ok: true };
+}
+
+export async function markQuoteSent(quoteId) {
+  const session = await requireAuthSession();
+  const quote = await getQuoteForUser(session, quoteId);
+  if (!canEditQuote(session, quote)) throw new Error("No autorizado");
+
+  if (quote.status === "PENDING_APPROVAL") {
+    throw new Error("Debe aprobarse antes de enviar");
+  }
+  if (quote.status === "REJECTED") {
+    throw new Error("Presupuesto rechazado — edítalo y guarda de nuevo");
+  }
+
+  const lines = quote.lines.length
+    ? quote.lines
+    : await prisma.quoteLine.findMany({ where: { quoteId }, orderBy: { sortOrder: "asc" } });
+
+  if (needsApproval(quote, lines)) {
+    throw new Error("Precio pack por debajo del catálogo — requiere aprobación");
+  }
+
+  await prisma.quote.update({
+    where: { id: quoteId },
+    data: { status: "SENT", sentAt: new Date() },
+  });
+
+  await prisma.contactEvent.create({
+    data: {
+      contactId: quote.contactId,
+      type: "quote_sent",
+      summary: `Presupuesto ${quote.number} enviado`,
+      userId: actorId(session),
+    },
+  });
+
+  revalidateQuotePaths(quoteId, quote.contactId);
+  revalidatePath("/leads");
+  revalidatePath("/pipeline");
+  return { ok: true };
+}
+
+export async function markQuoteAccepted(quoteId) {
+  const session = await requireAuthSession();
+  const quote = await getQuoteForUser(session, quoteId);
+  if (!canEditQuote(session, quote)) throw new Error("No autorizado");
+
+  await prisma.quote.update({
+    where: { id: quoteId },
+    data: { status: "ACCEPTED" },
+  });
+
+  await prisma.contactEvent.create({
+    data: {
+      contactId: quote.contactId,
+      type: "quote_accepted",
+      summary: `Presupuesto ${quote.number} aceptado`,
+      userId: actorId(session),
+    },
+  });
+
+  revalidateQuotePaths(quoteId, quote.contactId);
+  return { ok: true };
+}
+
+export async function duplicateQuote(quoteId) {
+  const session = await requireAuthSession();
+  const quote = await getQuoteForUser(session, quoteId);
+
+  const number = await generateQuoteNumber(prisma);
+  const newQuote = await prisma.quote.create({
+    data: {
+      number,
+      contactId: quote.contactId,
+      createdById: actorId(session),
+      status: "DRAFT",
+      billing: quote.billing,
+      packId: quote.packId,
+      discountPercent: quote.discountPercent,
+      notes: quote.notes,
+      validUntil: defaultValidUntil(),
+      lines: {
+        create: quote.lines.map((line, i) => ({
+          type: line.type,
+          description: line.description,
+          quantity: line.quantity,
+          unitPrice: line.unitPrice,
+          discountPercent: line.discountPercent,
+          sortOrder: i,
+          packId: line.packId,
+        })),
+      },
+    },
+  });
+
+  revalidateQuotePaths(newQuote.id, quote.contactId);
+  return { ok: true, quoteId: newQuote.id };
+}
+
+export async function fetchScopedQuotes(filters = {}) {
+  const session = await requireAuthSession();
+  const where = { ...quoteScope(session) };
+
+  if (filters.status) where.status = filters.status;
+
+  return prisma.quote.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    include: {
+      contact: { select: { id: true, name: true, email: true, company: true } },
+      createdBy: { select: { id: true, name: true, email: true } },
+      lines: { orderBy: { sortOrder: "asc" } },
+    },
+  });
+}
+
+export async function addPackToQuote(quoteId, packId) {
+  const session = await requireAuthSession();
+  const quote = await getQuoteForUser(session, quoteId);
+  if (!canEditQuote(session, quote)) throw new Error("No autorizado");
+
+  const price = catalogPriceForPack(packId, quote.billing);
+  const existing = quote.lines.filter((l) => l.type !== "PACK" || l.packId !== packId);
+  const packLines = quote.lines.filter((l) => l.type === "PACK");
+  const otherPacks = packLines.filter((l) => l.packId !== packId);
+
+  const lines = [
+    ...otherPacks.map((l, i) => ({
+      type: l.type,
+      packId: l.packId,
+      description: l.description,
+      quantity: l.quantity,
+      unitPrice: l.unitPrice,
+      discountPercent: l.discountPercent,
+      sortOrder: i,
+    })),
+    {
+      type: "PACK",
+      packId,
+      description: packLineDescription(packId),
+      quantity: 1,
+      unitPrice: price,
+      sortOrder: otherPacks.length,
+    },
+    ...existing
+      .filter((l) => l.type !== "PACK")
+      .map((l, i) => ({
+        type: l.type,
+        description: l.description,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        discountPercent: l.discountPercent,
+        sortOrder: otherPacks.length + 1 + i,
+      })),
+  ];
+
+  await prisma.quote.update({
+    where: { id: quoteId },
+    data: { packId },
+  });
+  await syncQuoteLines(quoteId, lines);
+  revalidateQuotePaths(quoteId, quote.contactId);
+  return { ok: true };
+}
+
+export { planById, catalogPriceForPack, computeQuoteTotal };

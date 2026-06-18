@@ -5,11 +5,12 @@ import AssigneeBadge from "@/components/AssigneeBadge";
 import ContactQuickActions from "@/components/ContactQuickActions";
 import LeadScoreBadge from "@/components/LeadScoreBadge";
 import ContactEditor from "@/components/ContactEditor";
+import ContactQuotes from "@/components/ContactQuotes";
 import TaskForm from "@/components/TaskForm";
 import TaskList from "@/components/TaskList";
 import { SOURCE_LABEL } from "@/lib/constants";
 import { getAuthSession, listTeamUsers } from "@/lib/auth-server";
-import { canAccessContact, canAssignContacts, isStaff } from "@/lib/permissions";
+import { canAccessContact, canAssignContacts, isAdmin, isStaff } from "@/lib/permissions";
 
 export default async function LeadDetailPage({ params }) {
   const { id } = await params;
@@ -30,6 +31,13 @@ export default async function LeadDetailPage({ params }) {
         },
       },
       surveys: { orderBy: { createdAt: "desc" }, take: 3 },
+      quotes: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          contact: { select: { id: true, name: true } },
+          lines: { orderBy: { sortOrder: "asc" } },
+        },
+      },
     },
   });
 
@@ -114,6 +122,12 @@ export default async function LeadDetailPage({ params }) {
               </ul>
             </div>
           )}
+
+          <ContactQuotes
+            contactId={contact.id}
+            quotes={contact.quotes}
+            isAdmin={isAdmin(session)}
+          />
 
           <div className="card">
             <h2>Historial</h2>

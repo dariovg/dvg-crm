@@ -9,6 +9,7 @@ const links = [
   { href: "/pipeline", label: "Pipeline" },
   { href: "/tasks", label: "Tareas" },
   { href: "/calendar", label: "Calendario" },
+  { href: "/presupuestos", label: "Presupuestos" },
 ];
 
 export default function Sidebar() {

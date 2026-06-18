@@ -37,6 +37,25 @@ enum ContactSource {
   MANUAL
 }
 
+enum QuoteStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  SENT
+  ACCEPTED
+  REJECTED
+}
+
+enum QuoteBilling {
+  MONTHLY
+  ANNUAL
+}
+
+enum QuoteLineType {
+  PACK
+  CUSTOM
+}
+
 model User {
   id                   String    @id @default(cuid())
   email                String    @unique
@@ -57,6 +76,8 @@ model User {
   assignedContacts     Contact[] @relation("ContactAssignee")
   createdContacts      Contact[] @relation("ContactCreator")
   notifications        Notification[]
+  createdQuotes        Quote[]   @relation("QuoteCreator")
+  approvedQuotes       Quote[]   @relation("QuoteApprover")
 }
 
 model AppSetting {
@@ -117,6 +138,7 @@ model Contact {
   meetings  Meeting[]
   tasks     Task[]
   surveys   SurveyResponse[]
+  quotes    Quote[]
 
   @@index([email])
   @@index([status])
@@ -182,4 +204,47 @@ model Task {
   @@index([contactId])
   @@index([dueAt])
   @@index([done])
+}
+
+model Quote {
+  id              String       @id @default(cuid())
+  number          String       @unique
+  contactId       String
+  contact         Contact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  createdById     String?
+  createdBy       User?        @relation("QuoteCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  status          QuoteStatus  @default(DRAFT)
+  billing         QuoteBilling @default(MONTHLY)
+  packId          String?
+  discountPercent Int?
+  notes           String?      @db.Text
+  validUntil      DateTime?
+  approvalNote    String?
+  approvedById    String?
+  approvedBy      User?        @relation("QuoteApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedAt      DateTime?
+  sentAt          DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  lines           QuoteLine[]
+
+  @@index([contactId])
+  @@index([status])
+  @@index([createdById])
+  @@index([createdAt])
+}
+
+model QuoteLine {
+  id              String        @id @default(cuid())
+  quoteId         String
+  quote           Quote         @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  type            QuoteLineType
+  description     String        @db.Text
+  quantity        Int           @default(1)
+  unitPrice       Int
+  discountPercent Int?
+  sortOrder       Int           @default(0)
+  packId          String?
+
+  @@index([quoteId])
 }
