@@ -1,13 +1,18 @@
 import Link from "next/link";
 import StatusBadge from "@/components/StatusBadge";
+import { FUNNEL_STAGES } from "@/lib/constants";
 
 export default function DashboardView({
   stats,
   recent,
-  isAdmin,
+  isStaff,
   teamCount,
+  memberStats,
+  funnel,
+  weekly,
 }) {
   const maxPipeline = Math.max(...stats.byStatus.map((s) => s.count), 1);
+  const maxFunnel = Math.max(...funnel.map((f) => f.count), 1);
 
   return (
     <>
@@ -15,7 +20,7 @@ export default function DashboardView({
         <div>
           <h1 className="page-title">Resumen</h1>
           <p className="page-lead">
-            {isAdmin
+            {isStaff
               ? `Vista global · ${teamCount} en el equipo`
               : "Tus leads y tareas asignadas"}
           </p>
@@ -43,10 +48,14 @@ export default function DashboardView({
           <span className="dash-kpi-label">Clientes</span>
         </div>
         <div className="dash-kpi">
+          <span className="dash-kpi-value">{stats.dealValueTotal} €</span>
+          <span className="dash-kpi-label">Pipeline (valor)</span>
+        </div>
+        <div className="dash-kpi">
           <span className="dash-kpi-value">{stats.pendingTasks}</span>
           <span className="dash-kpi-label">Tareas pendientes</span>
         </div>
-        {isAdmin && (
+        {isStaff && (
           <div className="dash-kpi dash-kpi--warn">
             <span className="dash-kpi-value">{stats.unassigned}</span>
             <span className="dash-kpi-label">Sin asignar</span>
@@ -54,7 +63,54 @@ export default function DashboardView({
         )}
       </div>
 
+      {weekly && (
+        <div className="card weekly-strip">
+          <h2>Esta semana</h2>
+          <div className="weekly-stats">
+            <div>
+              <strong>{weekly.newLeads}</strong>
+              <span>Leads nuevos</span>
+            </div>
+            <div>
+              <strong>{weekly.statusChanges}</strong>
+              <span>Cambios de estado</span>
+            </div>
+            <div>
+              <strong>{weekly.tasksDone}</strong>
+              <span>Tareas hechas</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="dash-grid">
+        <div className="card dash-pipeline-chart">
+          <h2>Embudo de conversión</h2>
+          <ul className="funnel-list">
+            {funnel.map((f, i) => {
+              const prev = i > 0 ? funnel[i - 1].count : null;
+              const rate =
+                prev && prev > 0 ? Math.round((f.count / prev) * 100) : null;
+              return (
+                <li key={f.id} className="funnel-step">
+                  <span className="funnel-label">{f.label}</span>
+                  <div className="funnel-bar-track">
+                    <div
+                      className="funnel-bar-fill"
+                      data-status={f.id}
+                      style={{ width: `${(f.count / maxFunnel) * 100}%` }}
+                    />
+                  </div>
+                  <span className="funnel-num">{f.count}</span>
+                  {rate != null && (
+                    <span className="funnel-rate">{rate}%</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
         <div className="card dash-pipeline-chart">
           <h2>Pipeline</h2>
           <ul className="pipeline-bars">
@@ -75,22 +131,38 @@ export default function DashboardView({
               ))}
           </ul>
         </div>
+      </div>
 
-        <div className="card dash-recent">
-          <h2>Últimos leads</h2>
-          <ul className="dash-recent-list">
-            {recent.map((c) => (
-              <li key={c.id}>
-                <Link href={`/leads/${c.id}`}>
-                  <strong>{c.name}</strong>
-                  <span>{c.email}</span>
-                </Link>
-                <StatusBadge status={c.status} />
-              </li>
+      {isStaff && memberStats?.length > 0 && (
+        <div className="card">
+          <h2>Por miembro del equipo</h2>
+          <div className="member-stats-grid">
+            {memberStats.map((m) => (
+              <div key={m.id} className="member-stat">
+                <strong>{m.name}</strong>
+                <span>{m.assigned} asignados</span>
+                <span>{m.won} clientes</span>
+                <span>{m.pendingTasks} tareas</span>
+              </div>
             ))}
-          </ul>
-          {!recent.length && <p className="empty-state">Aún no hay leads.</p>}
+          </div>
         </div>
+      )}
+
+      <div className="card dash-recent">
+        <h2>Últimos leads</h2>
+        <ul className="dash-recent-list">
+          {recent.map((c) => (
+            <li key={c.id}>
+              <Link href={`/leads/${c.id}`}>
+                <strong>{c.name}</strong>
+                <span>{c.email}</span>
+              </Link>
+              <StatusBadge status={c.status} />
+            </li>
+          ))}
+        </ul>
+        {!recent.length && <p className="empty-state">Aún no hay leads.</p>}
       </div>
     </>
   );

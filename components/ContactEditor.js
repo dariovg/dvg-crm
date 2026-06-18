@@ -6,15 +6,24 @@ import {
   updateContactNotes,
   updateContactStatus,
   assignContact,
+  updateContactDetails,
 } from "@/app/actions";
-import { CONTACT_STATUSES } from "@/lib/constants";
+import { CONTACT_STATUSES, LOST_REASONS } from "@/lib/constants";
 
-export default function ContactEditor({ contact, team = [], isAdmin = false }) {
+export default function ContactEditor({
+  contact,
+  team = [],
+  canAssign = false,
+}) {
   const router = useRouter();
   const [notes, setNotes] = useState(contact.notes || "");
   const [status, setStatus] = useState(contact.status);
+  const [lostReason, setLostReason] = useState(contact.lostReason || "");
   const [assigneeId, setAssigneeId] = useState(contact.assigneeId || "");
+  const [dealValue, setDealValue] = useState(contact.dealValue ?? "");
+  const [tags, setTags] = useState((contact.tags || []).join(", "));
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   async function saveNotes(e) {
     e.preventDefault();
@@ -23,13 +32,53 @@ export default function ContactEditor({ contact, team = [], isAdmin = false }) {
     setSaving(false);
   }
 
-  async function onStatusChange(e) {
-    const next = e.target.value;
-    setStatus(next);
+  async function saveDetails(e) {
+    e.preventDefault();
     setSaving(true);
-    await updateContactStatus(contact.id, next);
+    const tagList = tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    await updateContactDetails(contact.id, {
+      dealValue,
+      tags: tagList,
+    });
     setSaving(false);
     router.refresh();
+  }
+
+  async function onStatusChange(e) {
+    const next = e.target.value;
+    if (next === "LOST" && !lostReason) {
+      setStatus(next);
+      return;
+    }
+    setStatus(next);
+    setSaving(true);
+    setError("");
+    try {
+      await updateContactStatus(contact.id, next, lostReason);
+      router.refresh();
+    } catch (err) {
+      setError(err.message);
+    }
+    setSaving(false);
+  }
+
+  async function confirmLost() {
+    if (!lostReason) {
+      setError("Selecciona un motivo");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      await updateContactStatus(contact.id, "LOST", lostReason);
+      router.refresh();
+    } catch (err) {
+      setError(err.message);
+    }
+    setSaving(false);
   }
 
   async function onAssignChange(e) {
@@ -54,7 +103,37 @@ export default function ContactEditor({ contact, team = [], isAdmin = false }) {
           ))}
         </select>
       </div>
-      {isAdmin && (
+      {status === "LOST" && contact.status !== "LOST" && (
+        <div className="field">
+          <label>Motivo de pérdida *</label>
+          <select
+            value={lostReason}
+            onChange={(e) => setLostReason(e.target.value)}
+          >
+            <option value="">Seleccionar…</option>
+            {LOST_REASONS.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="btn-primary"
+            style={{ marginTop: ".5rem" }}
+            onClick={confirmLost}
+            disabled={saving}
+          >
+            Confirmar perdido
+          </button>
+        </div>
+      )}
+      {contact.lostReason && (
+        <p className="lost-reason-label">
+          Motivo: <strong>{contact.lostReason}</strong>
+        </p>
+      )}
+      {canAssign && (
         <div className="field">
           <label>Asignado a</label>
           <select
@@ -72,11 +151,34 @@ export default function ContactEditor({ contact, team = [], isAdmin = false }) {
           </select>
         </div>
       )}
+      <form onSubmit={saveDetails}>
+        <div className="field">
+          <label>Valor estimado (€)</label>
+          <input
+            type="number"
+            min="0"
+            value={dealValue}
+            onChange={(e) => setDealValue(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label>Etiquetas (separadas por coma)</label>
+          <input
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            placeholder="urgente, referido"
+          />
+        </div>
+        <button type="submit" className="btn-sm" disabled={saving}>
+          Guardar valor y etiquetas
+        </button>
+      </form>
       <form onSubmit={saveNotes}>
         <div className="field">
           <label>Notas internas</label>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
+        {error && <p className="form-error">{error}</p>}
         <button type="submit" className="btn-primary" disabled={saving}>
           Guardar notas
         </button>

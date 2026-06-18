@@ -7,12 +7,13 @@ import TaskForm from "@/components/TaskForm";
 import TaskList from "@/components/TaskList";
 import { SOURCE_LABEL } from "@/lib/constants";
 import { getAuthSession, listTeamUsers } from "@/lib/auth-server";
-import { canAccessContact, isAdmin } from "@/lib/permissions";
+import { canAccessContact, canAssignContacts, isStaff } from "@/lib/permissions";
 
 export default async function LeadDetailPage({ params }) {
   const { id } = await params;
   const session = await getAuthSession();
-  const admin = isAdmin(session);
+  const canAssign = canAssignContacts(session);
+  const staff = isStaff(session);
 
   const contact = await prisma.contact.findUnique({
     where: { id },
@@ -32,7 +33,7 @@ export default async function LeadDetailPage({ params }) {
 
   if (!contact || !canAccessContact(session, contact)) notFound();
 
-  const team = admin ? await listTeamUsers() : [];
+  const team = canAssign ? await listTeamUsers() : [];
 
   return (
     <>
@@ -60,6 +61,20 @@ export default async function LeadDetailPage({ params }) {
             <p>
               <strong>Teléfono:</strong> {contact.phone || "—"}
             </p>
+            <p>
+              <strong>Valor:</strong>{" "}
+              {contact.dealValue ? `${contact.dealValue} €` : "—"}
+            </p>
+            {contact.tags?.length > 0 && (
+              <p>
+                <strong>Etiquetas:</strong>{" "}
+                {contact.tags.map((t) => (
+                  <span key={t} className="tag-chip">
+                    {t}
+                  </span>
+                ))}
+              </p>
+            )}
             <p>
               <strong>Interés:</strong> {contact.interest || "—"}
             </p>
@@ -107,15 +122,15 @@ export default async function LeadDetailPage({ params }) {
         </div>
 
         <div>
-          <ContactEditor contact={contact} team={team} isAdmin={admin} />
-          <TaskForm contactId={contact.id} team={team} isAdmin={admin} />
+          <ContactEditor contact={contact} team={team} canAssign={canAssign} />
+          <TaskForm contactId={contact.id} team={team} canAssign={canAssign} />
           {contact.tasks.length > 0 && (
             <div className="card task-list-card">
               <h2>Tareas del lead</h2>
               <TaskList
                 tasks={contact.tasks}
                 team={team}
-                isAdmin={admin}
+                isAdmin={staff}
                 embedded
                 showContact={false}
               />

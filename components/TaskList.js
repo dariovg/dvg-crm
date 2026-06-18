@@ -6,18 +6,39 @@ import { useState } from "react";
 import { toggleTask, updateTask, deleteTask } from "@/app/actions";
 import AssigneeBadge from "@/components/AssigneeBadge";
 
+import { TASK_PRIORITIES } from "@/lib/constants";
+
+function priorityClass(p) {
+  if (p === "HIGH") return "priority-high";
+  if (p === "LOW") return "priority-low";
+  return "priority-medium";
+}
+
+function dueClass(dueAt, done) {
+  if (done || !dueAt) return "";
+  const d = new Date(dueAt);
+  const now = new Date();
+  if (d < now) return "task-due--overdue";
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (d <= tomorrow) return "task-due--soon";
+  return "";
+}
+
 export default function TaskList({ tasks, team, isAdmin, embedded = false, showContact = true }) {
   const router = useRouter();
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDue, setEditDue] = useState("");
   const [editAssignee, setEditAssignee] = useState("");
+  const [editPriority, setEditPriority] = useState("MEDIUM");
 
   function startEdit(t) {
     setEditingId(t.id);
     setEditTitle(t.title);
     setEditDue(t.dueAt ? new Date(t.dueAt).toISOString().slice(0, 16) : "");
     setEditAssignee(t.assigneeId || "");
+    setEditPriority(t.priority || "MEDIUM");
   }
 
   async function saveEdit(taskId) {
@@ -25,6 +46,7 @@ export default function TaskList({ tasks, team, isAdmin, embedded = false, showC
       title: editTitle,
       dueAt: editDue || null,
       assigneeId: isAdmin ? editAssignee || null : undefined,
+      priority: editPriority,
     });
     setEditingId(null);
     router.refresh();
@@ -39,7 +61,7 @@ export default function TaskList({ tasks, team, isAdmin, embedded = false, showC
   return (
     <div className={embedded ? "task-list-inner" : "card task-list-card"}>
       {tasks.map((t) => (
-        <div key={t.id} className={`task-row${t.done ? " task-row--done" : ""}`}>
+        <div key={t.id} className={`task-row${t.done ? " task-row--done" : ""} ${dueClass(t.dueAt, t.done)}`}>
           <input
             type="checkbox"
             checked={t.done}
@@ -58,6 +80,17 @@ export default function TaskList({ tasks, team, isAdmin, embedded = false, showC
                 onChange={(e) => setEditDue(e.target.value)}
                 className="task-edit-input"
               />
+              <select
+                value={editPriority}
+                onChange={(e) => setEditPriority(e.target.value)}
+                className="task-edit-input"
+              >
+                {TASK_PRIORITIES.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
               {isAdmin && (
                 <select
                   value={editAssignee}
@@ -81,9 +114,16 @@ export default function TaskList({ tasks, team, isAdmin, embedded = false, showC
             </div>
           ) : (
             <>
-              <label>{t.title}</label>
+              <label>
+                {t.title}{" "}
+                <span className={`priority-pill ${priorityClass(t.priority)}`}>
+                  {TASK_PRIORITIES.find((p) => p.id === t.priority)?.label || "Media"}
+                </span>
+              </label>
               {t.dueAt && (
-                <small>{new Date(t.dueAt).toLocaleString("es-ES")}</small>
+                <small className={dueClass(t.dueAt, t.done)}>
+                  {new Date(t.dueAt).toLocaleString("es-ES")}
+                </small>
               )}
               {t.assignee && <AssigneeBadge user={t.assignee} />}
               {showContact && t.contact && (

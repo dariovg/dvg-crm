@@ -1,14 +1,16 @@
 import { Suspense } from "react";
 import { fetchScopedContacts } from "@/app/actions";
 import { getAuthSession, listTeamUsers } from "@/lib/auth-server";
-import { isAdmin } from "@/lib/permissions";
+import { canAssignContacts, isStaff } from "@/lib/permissions";
+import NewLeadForm from "@/components/NewLeadForm";
 import LeadsFilters, { LeadsTable } from "@/components/LeadsTable";
 
 export default async function LeadsPage({ searchParams }) {
   const params = await searchParams;
   const session = await getAuthSession();
-  const admin = isAdmin(session);
-  const team = admin ? await listTeamUsers() : [];
+  const staff = isStaff(session);
+  const canAssign = canAssignContacts(session);
+  const team = canAssign ? await listTeamUsers() : [];
 
   const contacts = await fetchScopedContacts({
     status: params.status || undefined,
@@ -19,17 +21,22 @@ export default async function LeadsPage({ searchParams }) {
 
   return (
     <>
-      <h1 className="page-title">Leads</h1>
-      <p className="page-lead">
-        {contacts.length} contacto{contacts.length !== 1 ? "s" : ""}
-        {admin ? " · Vista global" : " · Asignados a ti"}
-      </p>
+      <div className="page-head-row">
+        <div>
+          <h1 className="page-title">Leads</h1>
+          <p className="page-lead">
+            {contacts.length} contacto{contacts.length !== 1 ? "s" : ""}
+            {staff ? " · Vista global" : " · Asignados a ti"}
+          </p>
+        </div>
+        <NewLeadForm team={team} canAssign={canAssign} />
+      </div>
 
       <Suspense fallback={<div className="filters-bar">Cargando filtros…</div>}>
-        <LeadsFilters team={team} isAdmin={admin} />
+        <LeadsFilters team={team} canAssign={canAssign} />
       </Suspense>
 
-      <LeadsTable contacts={contacts} team={team} isAdmin={admin} />
+      <LeadsTable contacts={contacts} team={team} canAssign={canAssign} />
     </>
   );
 }

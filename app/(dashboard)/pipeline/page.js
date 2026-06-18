@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { CONTACT_STATUSES } from "@/lib/constants";
 import { getAuthSession } from "@/lib/auth-server";
-import { contactScope, isAdmin } from "@/lib/permissions";
+import { contactScope, isStaff } from "@/lib/permissions";
 import PipelineBoard from "@/components/PipelineBoard";
 
 export default async function PipelinePage() {
@@ -28,20 +28,22 @@ export default async function PipelinePage() {
       <h1 className="page-title">Pipeline</h1>
       <p className="page-lead">
         Arrastra tarjetas entre columnas o pulsa para ver detalle.
-        {isAdmin(session) ? "" : " Solo tus leads asignados."}
+        {isStaff(session) ? "" : " Solo tus leads asignados."}
       </p>
+      <div className="pipeline-scroll">
       <PipelineBoard
         columns={columns}
         allStatuses={CONTACT_STATUSES}
-        isAdmin={isAdmin(session)}
+        isAdmin={isStaff(session)}
       />
+      </div>
       {lost.length > 0 && (
         <div className="card pipeline-lost">
           <h2>Perdidos ({lost.length})</h2>
           <PipelineBoard
             columns={[{ id: "LOST", label: "Perdido", contacts: lost }]}
             allStatuses={CONTACT_STATUSES}
-            isAdmin={isAdmin(session)}
+            isAdmin={isStaff(session)}
           />
         </div>
       )}

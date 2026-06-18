@@ -3,12 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createTask } from "@/app/actions";
+import { TASK_PRIORITIES } from "@/lib/constants";
 
-export default function TaskForm({ contactId, team = [], isAdmin = false }) {
+export default function TaskForm({ contactId, team = [], canAssign = false }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
+  const [priority, setPriority] = useState("MEDIUM");
 
   async function submit(e) {
     e.preventDefault();
@@ -17,11 +19,13 @@ export default function TaskForm({ contactId, team = [], isAdmin = false }) {
       contactId,
       title.trim(),
       dueAt || null,
-      isAdmin ? assigneeId || null : undefined
+      canAssign ? assigneeId || null : undefined,
+      priority
     );
     setTitle("");
     setDueAt("");
     setAssigneeId("");
+    setPriority("MEDIUM");
     router.refresh();
   }
 
@@ -37,6 +41,16 @@ export default function TaskForm({ contactId, team = [], isAdmin = false }) {
         />
       </div>
       <div className="field">
+        <label>Prioridad</label>
+        <select value={priority} onChange={(e) => setPriority(e.target.value)}>
+          {TASK_PRIORITIES.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="field">
         <label>Fecha límite (opcional)</label>
         <input
           type="datetime-local"
@@ -44,7 +58,7 @@ export default function TaskForm({ contactId, team = [], isAdmin = false }) {
           onChange={(e) => setDueAt(e.target.value)}
         />
       </div>
-      {isAdmin && (
+      {canAssign && (
         <div className="field">
           <label>Asignar a</label>
           <select

@@ -10,7 +10,9 @@ const links = [
 
 export default function Sidebar() {
   const { data: session } = useSession();
-  const isAdmin = session?.user?.role === "ADMIN";
+  const role = session?.user?.role;
+  const isAdmin = role === "ADMIN";
+  const isManager = role === "MANAGER";
 
   return (
     <aside className="sidebar">
@@ -24,6 +26,11 @@ export default function Sidebar() {
             {l.label}
           </Link>
         ))}
+        {isAdmin && (
+          <Link href="/admin/users" className="sidebar-link">
+            Equipo
+          </Link>
+        )}
       </nav>
       <div className="sidebar-foot">
         {isAdmin && (
@@ -35,9 +42,9 @@ export default function Sidebar() {
           <div className="sidebar-user">
             <p>{session.user.name || session.user.email}</p>
             <span
-              className={`role-badge${isAdmin ? " role-badge--admin" : ""}`}
+              className={`role-badge${isAdmin ? " role-badge--admin" : isManager ? " role-badge--manager" : ""}`}
             >
-              {isAdmin ? "Administración" : "Equipo"}
+              {isAdmin ? "Administración" : isManager ? "Manager" : "Equipo"}
             </span>
             <button
               type="button"

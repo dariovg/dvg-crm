@@ -20,7 +20,14 @@ enum ContactStatus {
 
 enum UserRole {
   ADMIN
+  MANAGER
   MEMBER
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
 }
 
 enum ContactSource {
@@ -46,6 +53,7 @@ model User {
   events               ContactEvent[]
   loginAttempts        LoginAttempt[]
   assignedContacts     Contact[] @relation("ContactAssignee")
+  createdContacts      Contact[] @relation("ContactCreator")
 }
 
 model LoginAttempt {
@@ -76,6 +84,11 @@ model Contact {
   notes      String?       @db.Text
   assigneeId String?
   assignee   User?         @relation("ContactAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdById String?
+  createdBy   User?         @relation("ContactCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  dealValue   Int?
+  tags        String[]      @default([])
+  lostReason  String?
   events     ContactEvent[]
   meetings  Meeting[]
   tasks     Task[]
@@ -138,7 +151,8 @@ model Task {
   dueAt      DateTime?
   done       Boolean   @default(false)
   assigneeId String?
-  assignee   User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assignee   User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  priority   TaskPriority @default(MEDIUM)
 
   @@index([contactId])
   @@index([dueAt])

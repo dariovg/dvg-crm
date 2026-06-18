@@ -37,7 +37,9 @@ export default function PipelineBoard({ columns, allStatuses, isAdmin }) {
     if (contactId) await move(contactId, colId);
   }
 
-  const statusOptions = allStatuses || columns;
+  const statusOptions = (allStatuses || columns).filter(
+    (s) => s.id !== "LOST"
+  );
 
   return (
     <div className="pipeline">

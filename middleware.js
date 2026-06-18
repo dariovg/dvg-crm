@@ -10,6 +10,7 @@ export const config = {
     "/leads/:path*",
     "/pipeline/:path*",
     "/tasks/:path*",
+    "/admin/:path*",
     "/api/export/:path*",
   ],
 };
