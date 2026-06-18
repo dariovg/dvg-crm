@@ -18,6 +18,9 @@ export const authOptions = {
         .map((e) => e.trim().toLowerCase());
       return allowed.includes(user.email.toLowerCase());
     },
+    async session({ session }) {
+      return session;
+    },
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
