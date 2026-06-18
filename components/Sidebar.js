@@ -1,16 +1,7 @@
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
-import ThemeToggle from "@/components/ThemeToggle";
+import { NAV_LINKS } from "@/lib/nav-links";
 import { isStaff } from "@/lib/permissions";
-
-const links = [
-  { href: "/dashboard", label: "Resumen" },
-  { href: "/leads", label: "Leads" },
-  { href: "/pipeline", label: "Pipeline" },
-  { href: "/tasks", label: "Tareas" },
-  { href: "/calendar", label: "Calendario" },
-  { href: "/presupuestos", label: "Presupuestos" },
-];
 
 export default function Sidebar() {
   const { data: session } = useSession();
@@ -26,7 +17,7 @@ export default function Sidebar() {
         <p className="sidebar-tag">hacIA lo imparable</p>
       </div>
       <nav className="sidebar-nav">
-        {links.map((l) => (
+        {NAV_LINKS.map((l) => (
           <Link key={l.href} href={l.href} className="sidebar-link">
             {l.label}
           </Link>
@@ -48,7 +39,6 @@ export default function Sidebar() {
         )}
       </nav>
       <div className="sidebar-foot">
-        <ThemeToggle />
         <p className="shortcuts-hint">
           <kbd>?</kbd> atajos · <kbd>⌘K</kbd> buscar
         </p>

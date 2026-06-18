@@ -1,24 +1,41 @@
 "use client";
 
+import { useState } from "react";
 import { SessionProvider } from "next-auth/react";
 import Sidebar from "@/components/Sidebar";
 import GlobalSearch from "@/components/GlobalSearch";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 import NotificationBell from "@/components/NotificationBell";
+import { HamburgerButton, MobileDrawer, BottomTabBar } from "@/components/MobileNav";
 
 export default function AppShell({ children }) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  function openDrawer() {
+    setDrawerOpen(true);
+  }
+
+  function closeDrawer() {
+    setDrawerOpen(false);
+  }
+
   return (
     <SessionProvider>
       <div className="app-shell">
         <Sidebar />
+        <MobileDrawer open={drawerOpen} onClose={closeDrawer} />
         <main className="app-main">
           <div className="app-topbar">
-            <NotificationBell />
-            <GlobalSearch />
+            <HamburgerButton open={drawerOpen} onClick={() => setDrawerOpen((v) => !v)} />
+            <div className="app-topbar-actions">
+              <NotificationBell />
+              <GlobalSearch />
+            </div>
           </div>
           {children}
         </main>
       </div>
+      <BottomTabBar onMoreClick={openDrawer} />
       <KeyboardShortcuts />
     </SessionProvider>
   );

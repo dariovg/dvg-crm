@@ -49,8 +49,14 @@ export default function GlobalSearch() {
         className="global-search-trigger"
         onClick={() => setOpen(true)}
         title="Buscar (Cmd+K)"
+        aria-label="Buscar"
       >
-        Buscar… <kbd>⌘K</kbd>
+        <span className="global-search-label">Buscar…</span>
+        <kbd className="global-search-kbd">⌘K</kbd>
+        <svg className="global-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-3-3" />
+        </svg>
       </button>
     );
   }

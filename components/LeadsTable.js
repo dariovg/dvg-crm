@@ -197,7 +197,66 @@ export function LeadsTable({ contacts, team, canAssign }) {
           </button>
         </div>
       )}
-      <div className="table-wrap">
+      <div className="leads-cards">
+        {contacts.map((c) => (
+          <article key={c.id} className="lead-card">
+            <div className="lead-card-head">
+              {canAssign && (
+                <input
+                  type="checkbox"
+                  className="lead-card-check"
+                  checked={selected.includes(c.id)}
+                  onChange={() => toggle(c.id)}
+                  aria-label={`Seleccionar ${c.name}`}
+                />
+              )}
+              <Link href={`/leads/${c.id}`} className="lead-card-title">
+                {c.name}
+              </Link>
+              <StatusBadge status={c.status} />
+            </div>
+            <p className="lead-card-email">{c.email}</p>
+            <div className="lead-card-meta">
+              {c.dealValue && <span>{c.dealValue} €</span>}
+              {c.leadScore != null && <LeadScoreBadge score={c.leadScore} />}
+              <span>{SOURCE_LABEL[c.source] || c.source}</span>
+              <span>{new Date(c.createdAt).toLocaleDateString("es-ES")}</span>
+            </div>
+            {c.tags?.length > 0 && (
+              <div className="tag-list">
+                {c.tags.map((t) => (
+                  <span key={t} className="tag-chip">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+            {canAssign && (
+              <div className="lead-card-assign">
+                <select
+                  className="assign-select"
+                  value={c.assigneeId || ""}
+                  onChange={(e) => onAssign(c.id, e.target.value)}
+                >
+                  <option value="">Sin asignar</option>
+                  {team.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name || u.email}
+                    </option>
+                  ))}
+                </select>
+                {c.assignee && (
+                  <AssigneeBadge user={c.assignee} className="assign-badge-inline" />
+                )}
+              </div>
+            )}
+          </article>
+        ))}
+        {!contacts.length && (
+          <p className="empty-state">No hay leads con estos filtros.</p>
+        )}
+      </div>
+      <div className="table-wrap table-wrap--desktop">
         <table className="data-table">
           <thead>
             <tr>

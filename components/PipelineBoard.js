@@ -106,6 +106,7 @@ export default function PipelineBoard({ columns, allStatuses, isAdmin }) {
                     defaultValue={c.status}
                     onChange={(e) => move(c.id, e.target.value)}
                     aria-label="Mover estado"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     {statusOptions.map((s) => (
                       <option key={s.id} value={s.id}>
