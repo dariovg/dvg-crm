@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { updateContactStatus } from "@/app/actions";
 import AssigneeBadge from "@/components/AssigneeBadge";
+import LeadScoreBadge from "@/components/LeadScoreBadge";
 import { SOURCE_LABEL } from "@/lib/constants";
 
 export default function PipelineBoard({ columns, allStatuses, isAdmin }) {
@@ -76,7 +77,10 @@ export default function PipelineBoard({ columns, allStatuses, isAdmin }) {
                     onClick={() => setExpandedId(expanded ? null : c.id)}
                   >
                     <strong>{c.name}</strong>
-                    {c.assignee && <AssigneeBadge user={c.assignee} />}
+                    <span className="pipeline-card-badges">
+                      {c.leadScore != null && <LeadScoreBadge score={c.leadScore} />}
+                      {c.assignee && <AssigneeBadge user={c.assignee} />}
+                    </span>
                   </button>
                   <span className="pipeline-card-email">{c.email}</span>
                   {expanded && (

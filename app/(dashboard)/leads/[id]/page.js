@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import StatusBadge from "@/components/StatusBadge";
 import AssigneeBadge from "@/components/AssigneeBadge";
+import ContactQuickActions from "@/components/ContactQuickActions";
+import LeadScoreBadge from "@/components/LeadScoreBadge";
 import ContactEditor from "@/components/ContactEditor";
 import TaskForm from "@/components/TaskForm";
 import TaskList from "@/components/TaskList";
@@ -46,7 +48,15 @@ export default async function LeadDetailPage({ params }) {
             · <AssigneeBadge user={contact.assignee} />
           </>
         )}
+        {contact.leadScore != null && (
+          <>
+            {" "}
+            · <LeadScoreBadge score={contact.leadScore} />
+          </>
+        )}
       </p>
+
+      <ContactQuickActions contact={contact} />
 
       <div className="detail-grid">
         <div>

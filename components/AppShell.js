@@ -4,6 +4,7 @@ import { SessionProvider } from "next-auth/react";
 import Sidebar from "@/components/Sidebar";
 import GlobalSearch from "@/components/GlobalSearch";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function AppShell({ children }) {
   return (
@@ -12,6 +13,7 @@ export default function AppShell({ children }) {
         <Sidebar />
         <main className="app-main">
           <div className="app-topbar">
+            <NotificationBell />
             <GlobalSearch />
           </div>
           {children}

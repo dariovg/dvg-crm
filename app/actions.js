@@ -15,6 +15,8 @@ import {
   isStaff,
 } from "@/lib/permissions";
 import { notifyAssignment } from "@/lib/mail";
+import { pushNotification } from "@/lib/notifications";
+import { generateTotpSecret, getTotpUri, verifyTotpToken } from "@/lib/totp";
 
 function appUrl() {
   return (
@@ -22,6 +24,19 @@ function appUrl() {
     process.env.CRM_APP_URL ||
     "https://crm.dvgsstudio.com"
   ).replace(/\/$/, "");
+}
+
+async function notifyAssignee(userId, assignee, type, title, path) {
+  if (!assignee?.id) return;
+  await mailAssignee(assignee, type, title, path);
+  if (userId !== assignee.id) {
+    await pushNotification(assignee.id, {
+      type: type === "lead" ? "lead_assigned" : "task_assigned",
+      title: type === "lead" ? "Lead asignado" : "Tarea asignada",
+      body: title,
+      link: path,
+    });
+  }
 }
 
 async function mailAssignee(assignee, type, title, path) {
@@ -205,7 +220,8 @@ export async function assignContact(contactId, assigneeId) {
       where: { id: contactId },
       select: { name: true },
     });
-    await mailAssignee(
+    await notifyAssignee(
+      actorId(session),
       assignee,
       "lead",
       contact?.name || "Lead",
@@ -248,7 +264,7 @@ export async function bulkAssignContacts(contactIds, assigneeId) {
         where: { id },
         select: { name: true },
       });
-      await mailAssignee(assignee, "lead", c?.name || "Lead", `/leads/${id}`);
+      await notifyAssignee(actorId(session), assignee, "lead", c?.name || "Lead", `/leads/${id}`);
     }
   }
   revalidatePath("/leads");
@@ -287,7 +303,7 @@ export async function createTask(
     const assignee = await prisma.user.findUnique({
       where: { id: targetAssignee },
     });
-    await mailAssignee(assignee, "task", title, `/leads/${contactId}`);
+    await notifyAssignee(actorId(session), assignee, "task", title, `/leads/${contactId}`);
   }
 
   revalidatePath("/tasks");
@@ -333,7 +349,8 @@ export async function updateTask(taskId, { title, dueAt, assigneeId, done, prior
 
   if (isStaff(session) && assigneeId && assigneeId !== task.assigneeId) {
     const assignee = await prisma.user.findUnique({ where: { id: assigneeId } });
-    await mailAssignee(
+    await notifyAssignee(
+      actorId(session),
       assignee,
       "task",
       title || task.title,
@@ -441,12 +458,154 @@ export async function updateTeamUser(userId, { name, role }) {
   if (role && !["MEMBER", "MANAGER", "ADMIN"].includes(role)) {
     throw new Error("Rol no válido");
   }
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      ...(name != null ? { name: name.trim() } : {}),
-      ...(role ? { role } : {}),
-    },
-  });
   revalidatePath("/admin/users");
+}
+
+export async function fetchNotifications() {
+  const session = await requireAuthSession();
+  const userId = session.user.id;
+  if (!userId || userId === "env-admin") return { items: [], unread: 0 };
+
+  const [items, unread] = await Promise.all([
+    prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+    }),
+    prisma.notification.count({ where: { userId, read: false } }),
+  ]);
+  return { items, unread };
+}
+
+export async function markNotificationRead(id) {
+  const session = await requireAuthSession();
+  await prisma.notification.updateMany({
+    where: { id, userId: session.user.id },
+    data: { read: true },
+  });
+}
+
+export async function markAllNotificationsRead() {
+  const session = await requireAuthSession();
+  await prisma.notification.updateMany({
+    where: { userId: session.user.id, read: false },
+    data: { read: true },
+  });
+}
+
+function parseCsvLine(line) {
+  const out = [];
+  let cur = "";
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') inQ = !inQ;
+    else if (c === "," && !inQ) {
+      out.push(cur.trim());
+      cur = "";
+    } else cur += c;
+  }
+  out.push(cur.trim());
+  return out;
+}
+
+export async function importLeadsFromCsv(text) {
+  const session = await requireStaffSession();
+  const lines = text.trim().split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) throw new Error("CSV vacío o sin filas de datos");
+
+  const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
+  const idx = (names) => {
+    for (const n of names) {
+      const i = headers.indexOf(n);
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+  const iName = idx(["nombre", "name"]);
+  const iEmail = idx(["email", "correo"]);
+  if (iName < 0 || iEmail < 0) throw new Error("Faltan columnas nombre y email");
+
+  const iPhone = idx(["telefono", "teléfono", "phone"]);
+  const iCompany = idx(["empresa", "company"]);
+  const iInterest = idx(["interes", "interés", "interest"]);
+  const iValue = idx(["valor", "deal", "value"]);
+
+  let created = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  for (let r = 1; r < lines.length; r++) {
+    const cols = parseCsvLine(lines[r]);
+    const name = cols[iName]?.trim();
+    const email = cols[iEmail]?.trim().toLowerCase();
+    if (!name || !email) {
+      errors++;
+      continue;
+    }
+    const dup = await findDuplicateByEmail(email);
+    if (dup) {
+      skipped++;
+      continue;
+    }
+    try {
+      await prisma.contact.create({
+        data: {
+          name,
+          email,
+          phone: iPhone >= 0 ? cols[iPhone]?.trim() || null : null,
+          company: iCompany >= 0 ? cols[iCompany]?.trim() || null : null,
+          interest: iInterest >= 0 ? cols[iInterest]?.trim() || null : null,
+          dealValue:
+            iValue >= 0 && cols[iValue]
+              ? parseInt(String(cols[iValue]).replace(/\D/g, ""), 10) || null
+              : null,
+          source: "MANUAL",
+          createdById: actorId(session),
+        },
+      });
+      created++;
+    } catch {
+      errors++;
+    }
+  }
+
+  revalidatePath("/leads");
+  revalidatePath("/dashboard");
+  return { created, skipped, errors };
+}
+
+export async function beginTotpSetup() {
+  const session = await requireAdminSession();
+  if (session.user.id === "env-admin") throw new Error("Activa admin en BD primero");
+  const secret = generateTotpSecret();
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { totpSecret: secret, totpEnabled: false },
+  });
+  return {
+    secret,
+    uri: getTotpUri(secret, session.user.email),
+  };
+}
+
+export async function confirmTotpSetup(code) {
+  const session = await requireAdminSession();
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!user?.totpSecret) throw new Error("Inicia configuración primero");
+  if (!verifyTotpToken(user.totpSecret, code)) throw new Error("Código incorrecto");
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { totpEnabled: true },
+  });
+  revalidatePath("/admin/security");
+}
+
+export async function disableTotp() {
+  const session = await requireAdminSession();
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { totpEnabled: false, totpSecret: null },
+  });
+  revalidatePath("/admin/security");
 }

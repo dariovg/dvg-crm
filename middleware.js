@@ -12,6 +12,7 @@ export const config = {
     "/calendar/:path*",
     "/tasks/:path*",
     "/admin/:path*",
+    "/leads/import",
     "/api/export/:path*",
   ],
 };

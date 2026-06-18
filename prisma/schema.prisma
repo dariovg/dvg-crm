@@ -47,6 +47,8 @@ model User {
   failedLoginAttempts  Int       @default(0)
   lockedUntil          DateTime?
   lastLoginAt          DateTime?
+  totpSecret           String?
+  totpEnabled          Boolean   @default(false)
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   tasks                Task[]    @relation("TaskAssignee")
@@ -54,6 +56,27 @@ model User {
   loginAttempts        LoginAttempt[]
   assignedContacts     Contact[] @relation("ContactAssignee")
   createdContacts      Contact[] @relation("ContactCreator")
+  notifications        Notification[]
+}
+
+model AppSetting {
+  key   String @id
+  value String
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  read      Boolean  @default(false)
+  type      String
+  title     String
+  body      String?
+  link      String?
+
+  @@index([userId, read])
+  @@index([createdAt])
 }
 
 model LoginAttempt {
@@ -89,6 +112,7 @@ model Contact {
   dealValue   Int?
   tags        String[]      @default([])
   lostReason  String?
+  leadScore   Int?
   events     ContactEvent[]
   meetings  Meeting[]
   tasks     Task[]

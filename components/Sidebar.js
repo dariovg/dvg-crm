@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import ThemeToggle from "@/components/ThemeToggle";
+import { isStaff } from "@/lib/permissions";
 
 const links = [
   { href: "/dashboard", label: "Resumen" },
@@ -15,6 +16,7 @@ export default function Sidebar() {
   const role = session?.user?.role;
   const isAdmin = role === "ADMIN";
   const isManager = role === "MANAGER";
+  const staff = isStaff({ user: session?.user });
 
   return (
     <aside className="sidebar">
@@ -29,8 +31,18 @@ export default function Sidebar() {
           </Link>
         ))}
         {isAdmin && (
-          <Link href="/admin/users" className="sidebar-link">
-            Equipo
+          <>
+            <Link href="/admin/users" className="sidebar-link">
+              Equipo
+            </Link>
+            <Link href="/admin/security" className="sidebar-link">
+              Seguridad
+            </Link>
+          </>
+        )}
+        {staff && (
+          <Link href="/leads/import" className="sidebar-link">
+            Importar CSV
           </Link>
         )}
       </nav>

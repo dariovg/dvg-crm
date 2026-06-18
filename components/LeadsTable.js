@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { assignContact, bulkAssignContacts } from "@/app/actions";
 import StatusBadge from "@/components/StatusBadge";
 import AssigneeBadge from "@/components/AssigneeBadge";
+import LeadScoreBadge from "@/components/LeadScoreBadge";
 import { SOURCE_LABEL, CONTACT_STATUSES } from "@/lib/constants";
 
 const STORAGE_KEY = "dvg-crm-saved-filters";
@@ -204,6 +205,7 @@ export function LeadsTable({ contacts, team, canAssign }) {
               <th>Nombre</th>
               <th>Email</th>
               <th>Valor</th>
+              <th>Score</th>
               <th>Estado</th>
               <th>Origen</th>
               {canAssign && <th>Asignado a</th>}
@@ -236,6 +238,7 @@ export function LeadsTable({ contacts, team, canAssign }) {
                 </td>
                 <td>{c.email}</td>
                 <td>{c.dealValue ? `${c.dealValue} €` : "—"}</td>
+                <td>{c.leadScore != null ? <LeadScoreBadge score={c.leadScore} /> : "—"}</td>
                 <td>
                   <StatusBadge status={c.status} />
                 </td>

@@ -76,6 +76,7 @@ function EyeIcon({ off }) {
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [totp, setTotp] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -88,11 +89,16 @@ export default function LoginPage() {
     const result = await signIn("credentials", {
       email: email.trim().toLowerCase(),
       password,
+      totp: totp.trim() || undefined,
       redirect: false,
     });
 
     if (result?.error) {
-      setError("Email o contraseña incorrectos. Revisa tus datos e inténtalo de nuevo.");
+      setError(
+        totp
+          ? "Código 2FA incorrecto o credenciales inválidas."
+          : "Email o contraseña incorrectos. Si tienes 2FA, introduce el código."
+      );
       setLoading(false);
     } else if (result?.ok) {
       window.location.href = "/dashboard";
@@ -176,6 +182,24 @@ export default function LoginPage() {
                 >
                   <EyeIcon off={showPass} />
                 </button>
+              </div>
+            </div>
+
+            <div className="login-field">
+              <label htmlFor="totp">Código 2FA (si está activo)</label>
+              <div className="login-input-wrap">
+                <input
+                  id="totp"
+                  type="text"
+                  name="totp"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="000000"
+                  value={totp}
+                  onChange={(e) => setTotp(e.target.value)}
+                  disabled={loading}
+                  maxLength={6}
+                />
               </div>
             </div>
 
