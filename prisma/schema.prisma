@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ContactStatus {
+  NEW
+  CONTACTED
+  MEETING_SCHEDULED
+  MEETING_DONE
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+enum ContactSource {
+  WEB_CHAT
+  BOOKING
+  SURVEY
+  MANUAL
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  role      UserRole @default(MEMBER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tasks     Task[]   @relation("TaskAssignee")
+  events    ContactEvent[]
+}
+
+model Contact {
+  id        String        @id @default(cuid())
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  name      String
+  email     String
+  company   String?
+  phone     String?
+  status    ContactStatus @default(NEW)
+  source    ContactSource @default(WEB_CHAT)
+  interest  String?
+  notes     String?       @db.Text
+  events    ContactEvent[]
+  meetings  Meeting[]
+  tasks     Task[]
+  surveys   SurveyResponse[]
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ContactEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  type      String
+  summary   String
+  payload   Json?
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([contactId])
+}
+
+model Meeting {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  contactId       String
+  contact         Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  date            String
+  time            String
+  meetUrl         String?
+  calendarEventId String?
+  notes           String?  @db.Text
+
+  @@index([contactId])
+}
+
+model SurveyResponse {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  email     String?
+  name      String?
+  answers   Json
+  score     Int?
+
+  @@index([email])
+}
+
+model Task {
+  id         String    @id @default(cuid())
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  contactId  String
+  contact    Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  title      String
+  dueAt      DateTime?
+  done       Boolean   @default(false)
+  assigneeId String?
+  assignee   User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+
+  @@index([contactId])
+  @@index([dueAt])
+  @@index([done])
+}
