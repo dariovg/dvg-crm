@@ -13,10 +13,9 @@ export const authOptions = {
   },
   callbacks: {
     async signIn({ user }) {
-      const allowed = (process.env.CRM_ALLOWED_EMAILS || "")
-        .split(",")
-        .map((e) => e.trim().toLowerCase());
-      return allowed.includes(user.email.toLowerCase());
+      // Hardcoded allowed emails
+      const allowedEmails = ["info@dvgsstudio.com", "dariovillarrealguillo@gmail.com"];
+      return allowedEmails.includes(user.email.toLowerCase());
     },
     async session({ session }) {
       return session;
