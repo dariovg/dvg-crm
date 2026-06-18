@@ -9,15 +9,12 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      console.log("Iniciando login con Google...");
-      const result = await signIn("google", {
+      await signIn("google", {
         redirect: true,
         callbackUrl: "/dashboard",
       });
-      console.log("Resultado del login:", result);
     } catch (error) {
       console.error("Error en login:", error);
-    } finally {
       setLoading(false);
     }
   };
@@ -28,7 +25,7 @@ export default function LoginPage() {
         <h1>
           DVG <span className="brand-ia">CRM</span>
         </h1>
-        <p>Acceso interno — inicia sesión con tu cuenta de Google autorizada.</p>
+        <p>Acceso interno — inicia sesión con tu cuenta corporativa.</p>
         <button
           type="button"
           className="btn-primary"
@@ -37,7 +34,6 @@ export default function LoginPage() {
         >
           {loading ? "Conectando..." : "Entrar con Google"}
         </button>
-        {loading && <p style={{ marginTop: "10px", fontSize: "12px" }}>Por favor espera...</p>}
       </div>
     </div>
   );
