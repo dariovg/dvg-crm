@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SocialPostCard } from "@/components/marketing/SocialPostCard";
+import SocialPostCard from "@/components/marketing/SocialPostCard";
 
 interface Post {
   id: string;
@@ -83,7 +83,7 @@ export default function PublishedPostsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredPosts.map((post) => (
-            <SocialPostCard key={post.id} post={post} />
+            <SocialPostCard key={post.id} post={post} showMetrics />
           ))}
         </div>
       )}

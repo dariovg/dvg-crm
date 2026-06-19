@@ -2,7 +2,8 @@
 import { getServerSession } from 'next-auth/next';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import authOptions from '@/app/api/auth/[...nextauth]/auth-options';
+import { authOptions } from '@/lib/auth-options';
+import type { SocialPlatform } from '@prisma/client';
 
 // GET - Fetch posts with filtering
 export async function GET(request: NextRequest) {
@@ -73,10 +74,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, platforms, campaignId, imageUrl, scheduledAt } = body;
+    const { content, platforms, campaignId, imageUrl, scheduledAt } = body;
 
-    // Validation
-    if (!title || !content || !platforms || platforms.length === 0) {
+    if (!content || !platforms || platforms.length === 0) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -90,16 +90,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create post for each platform
     const createdPosts = await Promise.all(
-      platforms.map((platform: string) =>
+      platforms.map((platform: SocialPlatform) =>
         prisma.socialPost.create({
           data: {
-            title,
             content,
             platform,
-            status: 'PENDING',
-            imageUrl,
+            status: 'PENDING_APPROVAL',
+            mediaUrls: imageUrl ? [imageUrl] : [],
             scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
             createdById: session.user.id,
             campaignId,
@@ -115,11 +113,10 @@ export async function POST(request: NextRequest) {
     // Create approval task if MARKETING approval is required
     if (session.user.role === 'MARKETING') {
       for (const post of createdPosts) {
-        await prisma.approvalLog.create({
+        await prisma.postApproval.create({
           data: {
             postId: post.id,
             status: 'PENDING',
-            requestedBy: session.user.id,
           },
         });
       }

@@ -2,7 +2,8 @@
 import { getServerSession } from 'next-auth/next';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import authOptions from '@/app/api/auth/[...nextauth]/auth-options';
+import { authOptions } from '@/lib/auth-options';
+import type { Prisma } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,15 +21,13 @@ export async function GET(request: NextRequest) {
     const platform = searchParams.get('platform');
     const range = searchParams.get('range') || '30days';
 
-    // Calculate date range
     const now = new Date();
     const daysAgo =
       range === '7days' ? 7 : range === '90days' ? 90 : 30;
     const startDate = new Date(now);
     startDate.setDate(startDate.getDate() - daysAgo);
 
-    // Build filter
-    const where: any = {
+    const where: Prisma.SocialPostWhereInput = {
       status: 'PUBLISHED',
       publishedAt: {
         gte: startDate,
@@ -37,34 +36,17 @@ export async function GET(request: NextRequest) {
     };
 
     if (platform && platform !== 'ALL') {
-      where.platform = platform;
+      where.platform = platform as Prisma.EnumSocialPlatformFilter['equals'];
     }
 
-    // Get all published posts in date range
     const posts = await prisma.socialPost.findMany({
       where,
-      include: {
-        metrics: true,
-      },
     });
 
-    // Calculate aggregated metrics
-    const totalImpressions = posts.reduce(
-      (sum, post) => sum + (post.metrics?.impressions || 0),
-      0
-    );
-    const totalLikes = posts.reduce(
-      (sum, post) => sum + (post.metrics?.likes || 0),
-      0
-    );
-    const totalComments = posts.reduce(
-      (sum, post) => sum + (post.metrics?.comments || 0),
-      0
-    );
-    const totalShares = posts.reduce(
-      (sum, post) => sum + (post.metrics?.shares || 0),
-      0
-    );
+    const totalImpressions = posts.reduce((sum, post) => sum + post.impressions, 0);
+    const totalLikes = posts.reduce((sum, post) => sum + post.likes, 0);
+    const totalComments = posts.reduce((sum, post) => sum + post.comments, 0);
+    const totalShares = posts.reduce((sum, post) => sum + post.shares, 0);
 
     const totalEngagement = totalLikes + totalComments + totalShares;
     const engagementRate =
@@ -72,23 +54,17 @@ export async function GET(request: NextRequest) {
     const ctr = totalImpressions > 0 ? (totalShares / totalImpressions) * 100 : 0;
     const averageEngagement = posts.length > 0 ? totalEngagement / posts.length : 0;
 
-    // Find top post
-    const topPost = posts.reduce((top, current) => {
-      const currentEngagement =
-        (current.metrics?.likes || 0) +
-        (current.metrics?.comments || 0) +
-        (current.metrics?.shares || 0);
-      const topEngagement =
-        (top?.metrics?.likes || 0) +
-        (top?.metrics?.comments || 0) +
-        (top?.metrics?.shares || 0);
+    const topPost = posts.reduce<(typeof posts)[number] | null>((top, current) => {
+      const currentEngagement = current.likes + current.comments + current.shares;
+      const topEngagement = top
+        ? top.likes + top.comments + top.shares
+        : 0;
 
       return currentEngagement > topEngagement ? current : top;
-    });
+    }, null);
 
-    // Generate trends data
-    const trendsMap: { [key: string]: { impressions: number; engagement: number } } = {};
-    
+    const trendsMap: Record<string, { impressions: number; engagement: number }> = {};
+
     for (let i = 0; i < daysAgo; i++) {
       const date = new Date(now);
       date.setDate(date.getDate() - i);
@@ -100,12 +76,11 @@ export async function GET(request: NextRequest) {
       if (post.publishedAt) {
         const dateStr = post.publishedAt.toISOString().split('T')[0];
         if (trendsMap[dateStr]) {
-          trendsMap[dateStr].impressions += post.metrics?.impressions || 0;
+          trendsMap[dateStr].impressions += post.impressions;
           trendsMap[dateStr].engagement +=
-            ((post.metrics?.likes || 0) +
-              (post.metrics?.comments || 0) +
-              (post.metrics?.shares || 0)) /
-            Math.max(1, post.metrics?.impressions || 1) * 100;
+            ((post.likes + post.comments + post.shares) /
+              Math.max(1, post.impressions)) *
+            100;
         }
       }
     });
@@ -130,13 +105,12 @@ export async function GET(request: NextRequest) {
       topPost: topPost
         ? {
             id: topPost.id,
-            title: topPost.title,
             content: topPost.content,
             metrics: {
-              likes: topPost.metrics?.likes || 0,
-              comments: topPost.metrics?.comments || 0,
-              shares: topPost.metrics?.shares || 0,
-              impressions: topPost.metrics?.impressions || 0,
+              likes: topPost.likes,
+              comments: topPost.comments,
+              shares: topPost.shares,
+              impressions: topPost.impressions,
             },
           }
         : null,

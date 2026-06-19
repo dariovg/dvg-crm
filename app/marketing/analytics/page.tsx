@@ -1,8 +1,8 @@
 // app/marketing/analytics/page.tsx
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
-import authOptions from "@/app/api/auth/[...nextauth]/auth-options";
-import { AnalyticsWidget } from "@/components/marketing/AnalyticsWidget";
+import { authOptions } from "@/lib/auth-options";
+import AnalyticsWidget from "@/components/marketing/AnalyticsWidget";
 
 export default async function AnalyticsPage() {
   const session = await getServerSession(authOptions);
@@ -21,9 +21,11 @@ export default async function AnalyticsPage() {
         </p>
       </div>
 
-      {/* Main analytics widget */}
-      <div className="mb-6">
-        <AnalyticsWidget />
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <AnalyticsWidget title="Impresiones" value={0} icon="👁️" color="blue" />
+        <AnalyticsWidget title="Likes" value={0} icon="❤️" color="red" />
+        <AnalyticsWidget title="Comentarios" value={0} icon="💬" color="green" />
+        <AnalyticsWidget title="Compartidos" value={0} icon="🔁" color="purple" />
       </div>
 
       {/* Additional insights */}

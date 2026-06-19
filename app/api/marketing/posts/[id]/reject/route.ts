@@ -2,14 +2,15 @@
 import { getServerSession } from 'next-auth/next';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import authOptions from '@/app/api/auth/[...nextauth]/auth-options';
+import { authOptions } from '@/lib/auth-options';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
+    const { id: postId } = await params;
 
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -20,7 +21,6 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden - Admin role required' }, { status: 403 });
     }
 
-    const postId = params.id;
     const body = await request.json();
     const { reason } = body;
 
@@ -40,7 +40,7 @@ export async function POST(
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
 
-    if (post.status !== 'PENDING') {
+    if (post.status !== 'PENDING_APPROVAL') {
       return NextResponse.json(
         { error: `Cannot reject post with status: ${post.status}` },
         { status: 400 }
@@ -62,11 +62,12 @@ export async function POST(
     });
 
     // Create approval log with rejection reason
-    await prisma.approvalLog.create({
+    await prisma.postApproval.create({
       data: {
         postId,
         status: 'REJECTED',
         approvedById: session.user.id,
+        approvedAt: new Date(),
         notes: reason,
       },
     });

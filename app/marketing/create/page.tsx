@@ -1,7 +1,7 @@
 // app/marketing/create/page.tsx
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
-import authOptions from "@/app/api/auth/[...nextauth]/auth-options";
+import { authOptions } from "@/lib/auth-options";
 import { PublishForm } from "@/components/marketing/PublishForm";
 
 export default async function CreatePostPage() {
