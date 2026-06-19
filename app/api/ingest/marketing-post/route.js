@@ -12,7 +12,8 @@ const VALID_PLATFORMS = new Set([
 ]);
 
 function appendSourceNote(content, sourceUrl, newsTitle, platform) {
-  if (platform === "TWITTER") return content;
+  // Guiones cortos: la fuente va en metadata del CRM, no en el copy publicado.
+  if (platform === "TWITTER" || platform === "TIKTOK") return content;
   if (!sourceUrl && !newsTitle) return content;
   const note = newsTitle
     ? `\n\n📰 ${newsTitle}${sourceUrl ? `\n${sourceUrl}` : ""}`
@@ -20,6 +21,33 @@ function appendSourceNote(content, sourceUrl, newsTitle, platform) {
       ? `\n\n🔗 ${sourceUrl}`
       : "";
   return `${content}${note}`.trim();
+}
+
+async function resolveCampaignId(body) {
+  if (body.campaignId) return body.campaignId;
+  const name = body.campaignName?.trim();
+  if (!name) return null;
+
+  const existing = await prisma.campaign.findFirst({ where: { name } });
+  if (existing) return existing.id;
+
+  const start = body.weekStart ? new Date(body.weekStart) : new Date();
+  const end = body.weekEnd
+    ? new Date(body.weekEnd)
+    : new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const created = await prisma.campaign.create({
+    data: {
+      name,
+      startDate: start,
+      endDate: end,
+      status: "ACTIVE",
+      description:
+        body.campaignDescription ||
+        "Plan semanal generado automáticamente (Bedrock)",
+    },
+  });
+  return created.id;
 }
 
 async function createDraft({
@@ -77,13 +105,14 @@ export async function POST(req) {
     const body = await req.json();
 
     if (Array.isArray(body.posts) && body.posts.length > 0) {
+      const campaignId = await resolveCampaignId(body);
       const results = [];
       for (const item of body.posts) {
         results.push(
           await createDraft({
             platform: item.platform,
             content: item.content,
-            campaignId: item.campaignId || body.campaignId,
+            campaignId: item.campaignId || campaignId,
             scheduledAt: item.scheduledAt || body.scheduledAt,
             mediaUrls: item.mediaUrls,
             sourceUrl: item.sourceUrl || body.sourceUrl,
@@ -98,14 +127,18 @@ export async function POST(req) {
         created: created.length,
         postIds: created.map((r) => r.postId),
         results,
-        reviewUrl: "/marketing/pending",
+        reviewUrl: body.campaignName?.includes("Simulación")
+          ? "/marketing/semana"
+          : "/marketing/pending",
+        weekReviewUrl: "/marketing/semana",
       });
     }
 
+    const campaignId = await resolveCampaignId(body);
     const single = await createDraft({
       platform: body.platform,
       content: body.content,
-      campaignId: body.campaignId,
+      campaignId,
       scheduledAt: body.scheduledAt,
       mediaUrls: body.mediaUrls || (body.imageUrl ? [body.imageUrl] : []),
       sourceUrl: body.sourceUrl,

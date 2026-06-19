@@ -19,6 +19,7 @@ interface SocialPostCardProps {
     status: string;
     createdAt: string;
     publishedAt?: string | null;
+    scheduledAt?: string | null;
     imageUrl?: string;
     mediaUrls?: string[];
     createdBy?: { name: string; email?: string } | null;
@@ -115,6 +116,42 @@ export default function SocialPostCard({
                 className="w-full h-auto object-cover"
               />
             </div>
+          )}
+
+          {post.mediaUrls?.some((u) => /\.mp3(\?|$)/i.test(u)) &&
+            post.mediaUrls
+              .filter((u) => /\.mp3(\?|$)/i.test(u))
+              .map((audioUrl) => (
+                <audio
+                  key={audioUrl}
+                  controls
+                  src={audioUrl}
+                  className="w-full mb-3"
+                  preload="metadata"
+                />
+              ))}
+
+          {post.mediaUrls?.some(
+            (u) => !/\.mp3(\?|$)/i.test(u) && /^https?:\/\//i.test(u)
+          ) &&
+            post.mediaUrls
+              .filter(
+                (u) => !/\.mp3(\?|$)/i.test(u) && /^https?:\/\//i.test(u)
+              )
+              .map((videoUrl) => (
+                <p key={videoUrl} className="text-sm text-green-700 mb-2">
+                  🎬{" "}
+                  <a href={videoUrl} target="_blank" rel="noreferrer" className="underline">
+                    Vídeo enlazado
+                  </a>
+                </p>
+              ))}
+
+          {post.scheduledAt && (
+            <p className="text-sm text-purple-700 mb-2">
+              📅 Programado:{" "}
+              {new Date(post.scheduledAt).toLocaleString("es-ES")}
+            </p>
           )}
 
           <div className="flex flex-wrap gap-4 text-sm text-gray-600">
