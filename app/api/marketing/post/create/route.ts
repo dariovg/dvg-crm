@@ -3,13 +3,14 @@ import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth-options";
+import { getPlatformLimit } from "@/lib/social/platform-limits.js";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     if (session.user.role !== "ADMIN" && session.user.role !== "MARKETING") {
@@ -25,9 +26,18 @@ export async function POST(request: NextRequest) {
       mediaUrls = [],
     } = body;
 
-    if (!platform || !content) {
+    const text = String(content || "").trim();
+    if (!platform || !text) {
       return NextResponse.json(
-        { error: "Missing required fields: platform, content" },
+        { error: "Plataforma y contenido son obligatorios" },
+        { status: 400 }
+      );
+    }
+
+    const limit = getPlatformLimit(platform);
+    if (text.length > limit) {
+      return NextResponse.json(
+        { error: `Máximo ${limit} caracteres para ${platform}` },
         { status: 400 }
       );
     }
@@ -35,10 +45,10 @@ export async function POST(request: NextRequest) {
     const post = await prisma.socialPost.create({
       data: {
         platform,
-        content,
-        campaignId,
+        content: text,
+        campaignId: campaignId || null,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-        mediaUrls,
+        mediaUrls: Array.isArray(mediaUrls) ? mediaUrls : [],
         createdById: session.user.id,
         status: "PENDING_APPROVAL",
       },

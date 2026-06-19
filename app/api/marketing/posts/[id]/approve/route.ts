@@ -40,11 +40,15 @@ export async function POST(
       );
     }
 
-    // Update post status
+    const nextStatus =
+      post.scheduledAt && new Date(post.scheduledAt) > new Date()
+        ? 'SCHEDULED'
+        : 'APPROVED';
+
     const updatedPost = await prisma.socialPost.update({
       where: { id: postId },
       data: {
-        status: 'APPROVED',
+        status: nextStatus,
       },
       include: {
         createdBy: true,
@@ -61,7 +65,10 @@ export async function POST(
         status: 'APPROVED',
         approvedById: session.user.id,
         approvedAt: new Date(),
-        notes: 'Post approved and ready to publish',
+        notes:
+          nextStatus === 'SCHEDULED'
+            ? `Aprobado — programado para ${post.scheduledAt?.toISOString()}`
+            : 'Aprobado — listo para publicar',
       },
     });
 

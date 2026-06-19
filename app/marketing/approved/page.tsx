@@ -1,0 +1,150 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import SocialPostCard from "@/components/marketing/SocialPostCard";
+import PublishButton from "@/components/marketing/PublishButton";
+
+interface Post {
+  id: string;
+  content: string;
+  platform: string;
+  status: string;
+  scheduledAt?: string | null;
+  createdAt: string;
+  createdBy?: { name: string } | null;
+  campaign?: { name: string };
+}
+
+export default function ApprovedPostsPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
+  const [ready, setReady] = useState<Post[]>([]);
+  const [scheduled, setScheduled] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [xConfigured, setXConfigured] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const [approvedRes, scheduledRes, statusRes] = await Promise.all([
+        fetch("/api/marketing/posts?status=APPROVED"),
+        fetch("/api/marketing/posts?status=SCHEDULED"),
+        fetch("/api/marketing/status"),
+      ]);
+      const approved = await approvedRes.json();
+      const sched = await scheduledRes.json();
+      const status = statusRes.ok ? await statusRes.json() : { twitter: false };
+      setReady(approved.posts || []);
+      setScheduled(sched.posts || []);
+      setXConfigured(!!status.twitter);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  function removePost(id: string) {
+    setReady((prev) => prev.filter((p) => p.id !== id));
+    setScheduled((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  if (loading) {
+    return (
+      <div className="page-pad">
+        <h1>Listo para publicar</h1>
+        <p className="muted">Cargando…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-pad">
+      <header className="page-head">
+        <div>
+          <h1>Listo para publicar</h1>
+          <p className="page-sub">
+            Posts aprobados — publícalos en un clic cuando tengas la API de X configurada
+          </p>
+        </div>
+        <Link href="/marketing/create" className="btn btn-primary">
+          + Crear contenido
+        </Link>
+      </header>
+
+      {!xConfigured && isAdmin && (
+        <div className="alert alert-warn">
+          <strong>API de X no configurada.</strong> Añade{" "}
+          <code>X_API_KEY</code>, <code>X_API_SECRET</code>, <code>X_ACCESS_TOKEN</code> y{" "}
+          <code>X_ACCESS_TOKEN_SECRET</code> en Vercel para publicar automáticamente.
+          Mientras tanto puedes copiar el texto y publicar manualmente.
+        </div>
+      )}
+
+      <section className="marketing-section">
+        <h2 className="panel-title">
+          Publicar ahora ({ready.length})
+        </h2>
+        {ready.length === 0 ? (
+          <p className="muted">
+            No hay posts aprobados.{" "}
+            <Link href="/marketing/pending">Revisa pendientes</Link> o{" "}
+            <Link href="/marketing/create">crea contenido</Link>.
+          </p>
+        ) : (
+          <div className="marketing-post-list">
+            {ready.map((post) => (
+              <div key={post.id} className="panel">
+                <SocialPostCard post={post} />
+                {isAdmin && (
+                  <div className="marketing-approval-actions">
+                    <PublishButton
+                      postId={post.id}
+                      platform={post.platform}
+                      onPublished={() => removePost(post.id)}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {scheduled.length > 0 && (
+        <section className="marketing-section">
+          <h2 className="panel-title">Programados ({scheduled.length})</h2>
+          <p className="muted" style={{ marginBottom: "1rem" }}>
+            Se publicarán solos cuando llegue la hora (cron cada hora).
+          </p>
+          <div className="marketing-post-list">
+            {scheduled.map((post) => (
+              <div key={post.id} className="panel">
+                <SocialPostCard post={post} />
+                {post.scheduledAt && (
+                  <p className="muted">
+                    Programado:{" "}
+                    {new Date(post.scheduledAt).toLocaleString("es-ES")}
+                  </p>
+                )}
+                {isAdmin && xConfigured && (
+                  <div className="marketing-approval-actions">
+                    <PublishButton
+                      postId={post.id}
+                      platform={post.platform}
+                      onPublished={() => removePost(post.id)}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth-options";
 import { canAccessMarketing, canApproveMarketingPosts } from "@/lib/permissions";
 import { getMarketingDashboardStats } from "@/lib/marketing-stats";
+import { isTwitterConfigured } from "@/lib/social/twitter.js";
 
 export default async function MarketingDashboard() {
   const session = await getServerSession(authOptions);
@@ -14,6 +15,7 @@ export default async function MarketingDashboard() {
 
   const stats = await getMarketingDashboardStats();
   const isAdmin = canApproveMarketingPosts(session);
+  const xReady = isTwitterConfigured();
 
   return (
     <div className="page-pad">
@@ -21,13 +23,45 @@ export default async function MarketingDashboard() {
         <div>
           <h1>Marketing</h1>
           <p className="page-sub">
-            Contenido, aprobaciones y rendimiento en redes — integrado en el CRM
+            Contenido diario → revisión → publicación en X
           </p>
         </div>
         <Link href="/marketing/create" className="btn btn-primary">
-          + Crear contenido
+          + Post de hoy
         </Link>
       </header>
+
+      <section className="marketing-pipeline">
+        <Link href="/marketing/create" className="marketing-pipeline-step">
+          <span className="marketing-pipeline-num">1</span>
+          <strong>Crear</strong>
+          <span className="muted">Redacta o plantilla</span>
+        </Link>
+        <Link href="/marketing/pending" className="marketing-pipeline-step">
+          <span className="marketing-pipeline-num">{stats.pendingCount}</span>
+          <strong>Revisar</strong>
+          <span className="muted">Pendientes</span>
+        </Link>
+        <Link href="/marketing/approved" className="marketing-pipeline-step">
+          <span className="marketing-pipeline-num">
+            {stats.approvedCount + stats.scheduledCount}
+          </span>
+          <strong>Publicar</strong>
+          <span className="muted">Listos / programados</span>
+        </Link>
+        <Link href="/marketing/published" className="marketing-pipeline-step">
+          <span className="marketing-pipeline-num">{stats.publishedCount}</span>
+          <strong>Historial</strong>
+          <span className="muted">En vivo</span>
+        </Link>
+      </section>
+
+      {isAdmin && !xReady && (
+        <div className="alert alert-warn">
+          Configura las claves de X en Vercel para publicar con un clic desde{" "}
+          <Link href="/marketing/approved">Publicar</Link>.
+        </div>
+      )}
 
       <div className="marketing-kpi-grid">
         <div className="marketing-kpi marketing-kpi--blue">
@@ -47,24 +81,9 @@ export default async function MarketingDashboard() {
           <div className="marketing-kpi-label">Leads nuevos (24h)</div>
         </div>
         <div className="marketing-kpi marketing-kpi--orange">
-          <div className="marketing-kpi-value">{stats.pendingCount}</div>
-          <div className="marketing-kpi-label">Pendientes de aprobación</div>
+          <div className="marketing-kpi-value">{stats.approvedCount}</div>
+          <div className="marketing-kpi-label">Listos para publicar</div>
         </div>
-      </div>
-
-      <div className="marketing-cards-grid">
-        <Link href="/marketing/pending" className="marketing-card">
-          <h2>Pendientes</h2>
-          <p>{stats.pendingCount} posts esperando revisión</p>
-        </Link>
-        <Link href="/marketing/published" className="marketing-card">
-          <h2>Publicados</h2>
-          <p>{stats.publishedCount} posts en vivo</p>
-        </Link>
-        <Link href="/marketing/create" className="marketing-card">
-          <h2>Crear contenido</h2>
-          <p>Nuevo post para redes sociales</p>
-        </Link>
       </div>
 
       <div className="marketing-panels">
@@ -81,14 +100,14 @@ export default async function MarketingDashboard() {
             </div>
           </div>
           <Link href="/marketing/analytics" className="text-link">
-            Ver analítica completa →
+            Ver analítica →
           </Link>
         </section>
 
         <section className="panel">
           <h2 className="panel-title">Leads recientes</h2>
           {stats.recentLeads.length === 0 ? (
-            <p className="muted">Sin leads nuevos todavía.</p>
+            <p className="muted">Sin leads nuevos.</p>
           ) : (
             <ul className="marketing-lead-list">
               {stats.recentLeads.map((lead) => (
@@ -96,9 +115,6 @@ export default async function MarketingDashboard() {
                   <Link href={`/leads/${lead.id}`}>
                     <strong>{lead.name || lead.email}</strong>
                     {lead.company ? ` · ${lead.company}` : ""}
-                    {lead.leadScore != null ? (
-                      <span className="lead-score">Score {lead.leadScore}</span>
-                    ) : null}
                   </Link>
                 </li>
               ))}
@@ -107,23 +123,22 @@ export default async function MarketingDashboard() {
         </section>
       </div>
 
-      {isAdmin && stats.recentPending.length > 0 && (
+      {isAdmin && stats.recentApproved.length > 0 && (
         <section className="panel">
           <div className="panel-head-row">
-            <h2 className="panel-title">Revisión rápida</h2>
-            <Link href="/marketing/pending" className="text-link">
-              Ver todos
+            <h2 className="panel-title">Publicar ahora</h2>
+            <Link href="/marketing/approved" className="text-link">
+              Ir a cola →
             </Link>
           </div>
           <ul className="marketing-pending-list">
-            {stats.recentPending.map((post) => (
+            {stats.recentApproved.map((post) => (
               <li key={post.id}>
                 <span className="platform-tag">{post.platform}</span>
-                <p>{post.content.slice(0, 120)}{post.content.length > 120 ? "…" : ""}</p>
-                <span className="muted">
-                  {post.createdBy?.name || "Sin autor"}
-                  {post.campaign ? ` · ${post.campaign.name}` : ""}
-                </span>
+                <p>
+                  {post.content.slice(0, 100)}
+                  {post.content.length > 100 ? "…" : ""}
+                </p>
               </li>
             ))}
           </ul>

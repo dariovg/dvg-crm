@@ -2445,13 +2445,95 @@ body {
   align-items: center;
   gap: 1rem;
 }
+.alert-warn {
+  background: color-mix(in srgb, #f59e0b 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, #f59e0b 40%, transparent);
+  color: var(--text);
+  padding: .85rem 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1.25rem;
+  font-size: .9rem;
+}
+.text-danger { color: #dc2626; font-size: .85rem; margin-top: .35rem; }
+.marketing-pipeline {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .75rem;
+  margin-bottom: 1.5rem;
+}
+.marketing-pipeline-step {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  padding: 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color .15s;
+}
+.marketing-pipeline-step:hover {
+  border-color: var(--primary);
+}
+.marketing-pipeline-num {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+.marketing-section { margin-top: 1.5rem; }
+.marketing-section + .marketing-section { margin-top: 2rem; }
+.marketing-form { display: flex; flex-direction: column; gap: 1rem; }
+.marketing-form-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+.marketing-platform-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: .5rem;
+}
+.marketing-platform-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .15rem;
+  padding: .65rem .4rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: .75rem;
+}
+.marketing-platform-btn--active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+}
+.marketing-platform-icon { font-size: 1.35rem; }
+.marketing-template-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+.marketing-templates { margin-bottom: 1.25rem; }
+.marketing-daily-steps {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: .9rem;
+}
+.marketing-daily-steps li + li { margin-top: .5rem; }
+.field-hint {
+  font-size: .8rem;
+  color: var(--text-muted);
+  margin-top: .35rem;
+}
+.field-input--error { border-color: #dc2626 !important; }
 @media (max-width: 900px) {
   .marketing-kpi-grid,
   .marketing-cards-grid,
   .marketing-panels,
-  .marketing-create-grid {
+  .marketing-create-grid,
+  .marketing-pipeline {
     grid-template-columns: 1fr;
   }
+  .marketing-pipeline { grid-template-columns: 1fr 1fr; }
 }
 
 @media print {
