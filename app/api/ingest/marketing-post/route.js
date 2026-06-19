@@ -11,7 +11,63 @@ const VALID_PLATFORMS = new Set([
   "FACEBOOK",
 ]);
 
-/** Borrador automático desde Telegram, Bedrock o scripts externos. */
+function appendSourceNote(content, sourceUrl, newsTitle, platform) {
+  if (platform === "TWITTER") return content;
+  if (!sourceUrl && !newsTitle) return content;
+  const note = newsTitle
+    ? `\n\n📰 ${newsTitle}${sourceUrl ? `\n${sourceUrl}` : ""}`
+    : sourceUrl
+      ? `\n\n🔗 ${sourceUrl}`
+      : "";
+  return `${content}${note}`.trim();
+}
+
+async function createDraft({
+  platform,
+  content,
+  campaignId,
+  scheduledAt,
+  mediaUrls,
+  sourceUrl,
+  newsTitle,
+}) {
+  const plat = String(platform || "TWITTER").toUpperCase();
+  const text = appendSourceNote(
+    String(content || "").trim(),
+    sourceUrl,
+    newsTitle,
+    plat
+  );
+
+  if (!VALID_PLATFORMS.has(plat)) {
+    return { error: "Plataforma inválida", platform: plat };
+  }
+  if (!text || text.length < 5) {
+    return { error: "Contenido demasiado corto", platform: plat };
+  }
+  const limit = getPlatformLimit(plat);
+  if (text.length > limit) {
+    return {
+      error: `Contenido supera ${limit} caracteres en ${plat}`,
+      platform: plat,
+    };
+  }
+
+  const post = await prisma.socialPost.create({
+    data: {
+      platform: plat,
+      content: text.slice(0, limit),
+      status: "PENDING_APPROVAL",
+      campaignId: campaignId || null,
+      scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+      mediaUrls: Array.isArray(mediaUrls) ? mediaUrls : [],
+    },
+  });
+
+  return { ok: true, postId: post.id, platform: plat, status: post.status };
+}
+
+/** Borrador automático desde Bedrock, Telegram o scripts externos. */
 export async function POST(req) {
   if (!verifyIngestSecret(req)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -19,45 +75,52 @@ export async function POST(req) {
 
   try {
     const body = await req.json();
-    const platform = String(body.platform || "TWITTER").toUpperCase();
-    const content = String(body.content || "").trim();
 
-    if (!VALID_PLATFORMS.has(platform)) {
-      return NextResponse.json({ error: "Plataforma inválida" }, { status: 400 });
-    }
-    if (!content || content.length < 5) {
-      return NextResponse.json({ error: "Contenido demasiado corto" }, { status: 400 });
-    }
-    if (content.length > getPlatformLimit(platform)) {
-      return NextResponse.json(
-        { error: `Contenido supera el límite de ${platform}` },
-        { status: 400 }
-      );
+    if (Array.isArray(body.posts) && body.posts.length > 0) {
+      const results = [];
+      for (const item of body.posts) {
+        results.push(
+          await createDraft({
+            platform: item.platform,
+            content: item.content,
+            campaignId: item.campaignId || body.campaignId,
+            scheduledAt: item.scheduledAt || body.scheduledAt,
+            mediaUrls: item.mediaUrls,
+            sourceUrl: item.sourceUrl || body.sourceUrl,
+            newsTitle: item.newsTitle || body.newsTitle,
+          })
+        );
+      }
+      const created = results.filter((r) => r.ok);
+      const errors = results.filter((r) => r.error);
+      return NextResponse.json({
+        ok: errors.length === 0,
+        created: created.length,
+        postIds: created.map((r) => r.postId),
+        results,
+        reviewUrl: "/marketing/pending",
+      });
     }
 
-    const scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null;
-    const mediaUrls = Array.isArray(body.mediaUrls)
-      ? body.mediaUrls.filter(Boolean).map(String)
-      : body.imageUrl
-        ? [String(body.imageUrl)]
-        : [];
-
-    const post = await prisma.socialPost.create({
-      data: {
-        platform,
-        content,
-        status: "PENDING_APPROVAL",
-        campaignId: body.campaignId || null,
-        scheduledAt,
-        mediaUrls,
-      },
+    const single = await createDraft({
+      platform: body.platform,
+      content: body.content,
+      campaignId: body.campaignId,
+      scheduledAt: body.scheduledAt,
+      mediaUrls: body.mediaUrls || (body.imageUrl ? [body.imageUrl] : []),
+      sourceUrl: body.sourceUrl,
+      newsTitle: body.newsTitle,
     });
+
+    if (single.error) {
+      return NextResponse.json({ error: single.error }, { status: 400 });
+    }
 
     return NextResponse.json({
       ok: true,
-      postId: post.id,
-      status: post.status,
-      reviewUrl: `/marketing/pending`,
+      postId: single.postId,
+      status: single.status,
+      reviewUrl: "/marketing/pending",
     });
   } catch (err) {
     console.error("ingest/marketing-post:", err);
