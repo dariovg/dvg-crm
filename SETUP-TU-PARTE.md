@@ -40,7 +40,7 @@ No hace falta Google OAuth.
 
 ```bash
 cd ~/Documents/dvg-crm
-CRM_ADMIN_PASSWORD='Informatica97' node scripts/seed-admin.js
+CRM_ADMIN_PASSWORD='your-admin-password' node scripts/seed-admin.js
 ```
 
 2. Copia `CRM_ADMIN_PASSWORD_HASH` a Vercel.
