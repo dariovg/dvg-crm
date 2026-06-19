@@ -49,7 +49,7 @@ export function PublishForm({ onSubmit, onCancel }: PublishFormProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create post");
+        throw new Error(errorData.error || "No se pudo crear el post");
       }
 
       setSuccess(true);
@@ -65,7 +65,7 @@ export function PublishForm({ onSubmit, onCancel }: PublishFormProps) {
         await onSubmit(formData);
       }
 
-      setTimeout(() => setSuccess(false), 3000);
+      setTimeout(() => setSuccess(false), 4000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -74,25 +74,20 @@ export function PublishForm({ onSubmit, onCancel }: PublishFormProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <h3 className="text-xl font-bold mb-6">📝 Create New Post</h3>
+    <div className="panel">
+      <h2 className="panel-title">Nuevo post</h2>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded text-red-800 text-sm">
-          {error}
-        </div>
-      )}
+      {error && <div className="alert alert-error">{error}</div>}
 
       {success && (
-        <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded text-green-800 text-sm">
-          Post created successfully! Waiting for approval.
+        <div className="alert alert-success">
+          Post enviado a revisión. Un administrador lo aprobará antes de publicarse.
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Platform selection */}
         <div>
-          <label className="block text-sm font-semibold mb-2">Platform</label>
+          <label className="field-label">Plataforma</label>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {PLATFORMS.map((p) => (
               <button
@@ -114,21 +109,17 @@ export function PublishForm({ onSubmit, onCancel }: PublishFormProps) {
           </div>
         </div>
 
-        {/* Content */}
         <div>
-          <label className="block text-sm font-semibold mb-2">
-            Content
-            <span className="text-gray-500 font-normal">
-              {" "}
-              ({formData.content.length} chars)
-            </span>
+          <label className="field-label">
+            Contenido
+            <span className="muted"> ({formData.content.length} caracteres)</span>
           </label>
           <textarea
             value={formData.content}
             onChange={(e) =>
               setFormData({ ...formData, content: e.target.value })
             }
-            placeholder="What's on your mind?"
+            placeholder="Escribe el mensaje para la red social…"
             maxLength={5000}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             rows={4}
@@ -136,11 +127,8 @@ export function PublishForm({ onSubmit, onCancel }: PublishFormProps) {
           />
         </div>
 
-        {/* Scheduled date/time */}
         <div>
-          <label className="block text-sm font-semibold mb-2">
-            Schedule (optional)
-          </label>
+          <label className="field-label">Programar (opcional)</label>
           <input
             type="datetime-local"
             value={formData.scheduledAt}
@@ -151,18 +139,15 @@ export function PublishForm({ onSubmit, onCancel }: PublishFormProps) {
           />
         </div>
 
-        {/* Campaign ID (optional) */}
         <div>
-          <label className="block text-sm font-semibold mb-2">
-            Campaign ID (optional)
-          </label>
+          <label className="field-label">Campaña (opcional, ID)</label>
           <input
             type="text"
             value={formData.campaignId}
             onChange={(e) =>
               setFormData({ ...formData, campaignId: e.target.value })
             }
-            placeholder="Link to a campaign"
+            placeholder="ID de campaña si aplica"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -174,7 +159,7 @@ export function PublishForm({ onSubmit, onCancel }: PublishFormProps) {
             disabled={loading || !formData.content.trim()}
             className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white font-semibold py-2 rounded transition-colors"
           >
-            {loading ? "Creating..." : "Create Post"}
+            {loading ? "Enviando…" : "Enviar a revisión"}
           </button>
           {onCancel && (
             <button
@@ -182,7 +167,7 @@ export function PublishForm({ onSubmit, onCancel }: PublishFormProps) {
               onClick={onCancel}
               className="px-6 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 rounded transition-colors"
             >
-              Cancel
+              Cancelar
             </button>
           )}
         </div>

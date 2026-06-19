@@ -13,7 +13,9 @@ export const config = {
     "/tasks/:path*",
     "/presupuestos/:path*",
     "/admin/:path*",
+    "/marketing/:path*",
     "/leads/import",
     "/api/export/:path*",
+    "/api/marketing/:path*",
   ],
 };

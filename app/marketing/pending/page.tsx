@@ -1,36 +1,25 @@
 // app/marketing/pending/page.tsx
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { getServerSession } from 'next-auth/next';
-import { redirect } from 'next/navigation';
-import SocialPostCard from '@/components/marketing/SocialPostCard';
-import ApprovalButtons from '@/components/marketing/ApprovalButtons';
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import SocialPostCard from "@/components/marketing/SocialPostCard";
+import ApprovalButtons from "@/components/marketing/ApprovalButtons";
 
 interface SocialPost {
   id: string;
-  title: string;
   content: string;
-  platform: 'TWITTER' | 'LINKEDIN' | 'INSTAGRAM' | 'FACEBOOK';
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PUBLISHED';
+  platform: string;
+  status: string;
   createdAt: string;
-  createdBy: {
-    name: string;
-    email: string;
-  };
-  campaign?: {
-    name: string;
-  };
-  approvals?: Array<{
-    id: string;
-    approvedBy: {
-      name: string;
-    };
-    status: string;
-  }>;
+  createdBy?: { name: string; email?: string } | null;
+  campaign?: { name: string };
 }
 
 export default function PendingPostsPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,13 +29,15 @@ export default function PendingPostsPage() {
     fetchPendingPosts();
   }, []);
 
-  const fetchPendingPosts = async () => {
+  async function fetchPendingPosts() {
     try {
       setLoading(true);
-      const response = await fetch('/api/marketing/posts?status=PENDING');
-      
+      const response = await fetch(
+        "/api/marketing/posts?status=PENDING_APPROVAL"
+      );
+
       if (!response.ok) {
-        throw new Error('Error fetching pending posts');
+        throw new Error("Error fetching pending posts");
       }
 
       const data = await response.json();
@@ -54,104 +45,102 @@ export default function PendingPostsPage() {
       setTotalCount(data.total);
       setError(null);
     } catch (err) {
-      console.error('Error:', err);
-      setError('Error al cargar posts pendientes');
+      console.error("Error:", err);
+      setError("Error al cargar posts pendientes");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleApprove = async (postId: string) => {
+  async function handleApprove(postId: string) {
     try {
       const response = await fetch(`/api/marketing/posts/${postId}/approve`, {
-        method: 'POST',
+        method: "POST",
       });
 
       if (response.ok) {
-        setPosts(posts.filter(p => p.id !== postId));
-        setTotalCount(prev => Math.max(0, prev - 1));
+        setPosts((prev) => prev.filter((p) => p.id !== postId));
+        setTotalCount((prev) => Math.max(0, prev - 1));
       } else {
-        setError('Error al aprobar post');
+        setError("Error al aprobar post");
       }
     } catch (err) {
-      console.error('Error:', err);
-      setError('Error al aprobar post');
+      console.error("Error:", err);
+      setError("Error al aprobar post");
     }
-  };
+  }
 
-  const handleReject = async (postId: string, reason: string) => {
+  async function handleReject(postId: string, reason: string) {
     try {
       const response = await fetch(`/api/marketing/posts/${postId}/reject`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
       });
 
       if (response.ok) {
-        setPosts(posts.filter(p => p.id !== postId));
-        setTotalCount(prev => Math.max(0, prev - 1));
+        setPosts((prev) => prev.filter((p) => p.id !== postId));
+        setTotalCount((prev) => Math.max(0, prev - 1));
       } else {
-        setError('Error al rechazar post');
+        setError("Error al rechazar post");
       }
     } catch (err) {
-      console.error('Error:', err);
-      setError('Error al rechazar post');
+      console.error("Error:", err);
+      setError("Error al rechazar post");
     }
-  };
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-4xl font-bold mb-8">📝 Posts Pendientes</h1>
-          <div className="flex justify-center items-center h-64">
-            <div className="text-xl text-gray-500">Cargando...</div>
-          </div>
-        </div>
+      <div className="page-pad">
+        <h1>Pendientes de aprobación</h1>
+        <p className="muted">Cargando…</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold">📝 Posts Pendientes de Aprobación</h1>
-          <div className="bg-white px-4 py-2 rounded-lg shadow">
-            <span className="text-gray-600">Total:</span>
-            <span className="ml-2 text-2xl font-bold text-blue-600">{totalCount}</span>
-          </div>
+    <div className="page-pad">
+      <header className="page-head">
+        <div>
+          <h1>Pendientes de aprobación</h1>
+          <p className="page-sub">
+            {isAdmin
+              ? "Revisa y aprueba el contenido antes de publicar"
+              : "Tus posts enviados a revisión"}
+          </p>
         </div>
+        <span className="marketing-count-badge">{totalCount}</span>
+      </header>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-8">
-            {error}
-          </div>
-        )}
+      {error && <div className="alert alert-error">{error}</div>}
 
-        {posts.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <div className="text-6xl mb-4">✅</div>
-            <h2 className="text-2xl font-bold mb-2">Sin posts pendientes</h2>
-            <p className="text-gray-600">¡Todos los posts han sido revisados!</p>
-          </div>
-        ) : (
-          <div className="grid gap-6">
-            {posts.map((post) => (
-              <div key={post.id} className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
-                <SocialPostCard post={post} />
-                <div className="mt-6 pt-6 border-t border-gray-200">
+      {posts.length === 0 ? (
+        <div className="panel panel--empty">
+          <h2>Sin posts pendientes</h2>
+          <p className="muted">Todo revisado. Crea nuevo contenido cuando quieras.</p>
+          <Link href="/marketing/create" className="btn btn-primary">
+            Crear contenido
+          </Link>
+        </div>
+      ) : (
+        <div className="marketing-post-list">
+          {posts.map((post) => (
+            <div key={post.id} className="panel">
+              <SocialPostCard post={post} />
+              {isAdmin && (
+                <div className="marketing-approval-actions">
                   <ApprovalButtons
                     postId={post.id}
                     onApprove={() => handleApprove(post.id)}
                     onReject={(reason) => handleReject(post.id, reason)}
                   />
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { NAV_LINKS, TAB_LINKS } from "@/lib/nav-links";
-import { isStaff } from "@/lib/permissions";
+import { isStaff, canAccessMarketing } from "@/lib/permissions";
 import ThemeToggle from "@/components/ThemeToggle";
 
 function NavIcon({ name }) {
@@ -78,6 +78,7 @@ export function MobileDrawer({ open, onClose }) {
   const role = session?.user?.role;
   const isAdmin = role === "ADMIN";
   const isManager = role === "MANAGER";
+  const marketing = canAccessMarketing({ user: session?.user });
   const staff = isStaff({ user: session?.user });
 
   function handleLinkClick() {
@@ -115,6 +116,15 @@ export function MobileDrawer({ open, onClose }) {
               {l.label}
             </Link>
           ))}
+          {marketing && (
+            <Link
+              href="/marketing"
+              className={`mobile-drawer-link${pathname.startsWith("/marketing") ? " mobile-drawer-link--active" : ""}`}
+              onClick={handleLinkClick}
+            >
+              Marketing
+            </Link>
+          )}
           {isAdmin && (
             <>
               <Link
@@ -197,7 +207,7 @@ export function BottomTabBar({ onMoreClick }) {
       ))}
       <button
         type="button"
-        className={`bottom-tab${pathname.startsWith("/calendar") || pathname.startsWith("/presupuestos") || pathname.startsWith("/admin") || pathname.startsWith("/leads/import") ? " bottom-tab--active" : ""}`}
+        className={`bottom-tab${pathname.startsWith("/calendar") || pathname.startsWith("/presupuestos") || pathname.startsWith("/admin") || pathname.startsWith("/marketing") || pathname.startsWith("/leads/import") ? " bottom-tab--active" : ""}`}
         onClick={onMoreClick}
       >
         <NavIcon name="more" />

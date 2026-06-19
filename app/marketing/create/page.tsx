@@ -2,59 +2,45 @@
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth-options";
+import { canAccessMarketing } from "@/lib/permissions";
 import { PublishForm } from "@/components/marketing/PublishForm";
 
 export default async function CreatePostPage() {
   const session = await getServerSession(authOptions);
 
   if (!session) redirect("/login");
-  if (session.user.role !== "ADMIN" && session.user.role !== "MARKETING") {
-    redirect("/dashboard");
-  }
+  if (!canAccessMarketing(session)) redirect("/dashboard");
 
   return (
-    <div className="p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">✍️ Create New Post</h1>
-        <p className="text-gray-600">
-          Create a social media post for review and approval
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Form */}
-        <div className="lg:col-span-2">
-          <PublishForm />
+    <div className="page-pad">
+      <header className="page-head">
+        <div>
+          <h1>Crear contenido</h1>
+          <p className="page-sub">
+            Redacta un post para redes. Quedará pendiente de aprobación antes de publicarse.
+          </p>
         </div>
+      </header>
 
-        {/* Tips sidebar */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-bold mb-4 text-blue-900">💡 Tips</h3>
-          <div className="space-y-4 text-sm text-blue-800">
-            <div>
-              <p className="font-semibold">Character Limits</p>
-              <p className="text-xs mt-1">Twitter: 280 • TikTok: 150 • Instagram: 2,200</p>
-            </div>
-            <div>
-              <p className="font-semibold">Best Times to Post</p>
-              <p className="text-xs mt-1">Weekdays 9-11 AM get 40% more engagement</p>
-            </div>
-            <div>
-              <p className="font-semibold">Hashtag Strategy</p>
-              <p className="text-xs mt-1">Use 3-5 relevant hashtags per platform</p>
-            </div>
-            <div>
-              <p className="font-semibold">Media Tips</p>
-              <p className="text-xs mt-1">Images increase engagement by 3x</p>
-            </div>
-            <div>
-              <p className="font-semibold">Scheduling</p>
-              <p className="text-xs mt-1">
-                Schedule posts for optimal audience availability
-              </p>
-            </div>
-          </div>
-        </div>
+      <div className="marketing-create-grid">
+        <PublishForm />
+        <aside className="panel marketing-tips">
+          <h2 className="panel-title">Consejos</h2>
+          <ul className="marketing-tips-list">
+            <li>
+              <strong>Límites:</strong> X 280 · TikTok 150 · Instagram 2.200 caracteres
+            </li>
+            <li>
+              <strong>Horario:</strong> entre semana 9–11 h suele rendir mejor
+            </li>
+            <li>
+              <strong>Hashtags:</strong> 3–5 relevantes por plataforma
+            </li>
+            <li>
+              <strong>Visual:</strong> las imágenes multiplican el engagement
+            </li>
+          </ul>
+        </aside>
       </div>
     </div>
   );

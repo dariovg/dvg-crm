@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { NAV_LINKS } from "@/lib/nav-links";
-import { isStaff } from "@/lib/permissions";
+import { isStaff, canAccessMarketing } from "@/lib/permissions";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Sidebar() {
@@ -9,6 +9,7 @@ export default function Sidebar() {
   const role = session?.user?.role;
   const isAdmin = role === "ADMIN";
   const isManager = role === "MANAGER";
+  const marketing = canAccessMarketing({ user: session?.user });
   const staff = isStaff({ user: session?.user });
 
   return (
@@ -23,6 +24,11 @@ export default function Sidebar() {
             {l.label}
           </Link>
         ))}
+        {marketing && (
+          <Link href="/marketing" className="sidebar-link">
+            Marketing
+          </Link>
+        )}
         {isAdmin && (
           <>
             <Link href="/admin/users" className="sidebar-link">
@@ -53,9 +59,15 @@ export default function Sidebar() {
           <div className="sidebar-user">
             <p>{session.user.name || session.user.email}</p>
             <span
-              className={`role-badge${isAdmin ? " role-badge--admin" : isManager ? " role-badge--manager" : ""}`}
+              className={`role-badge${isAdmin ? " role-badge--admin" : isManager ? " role-badge--manager" : role === "MARKETING" ? " role-badge--manager" : ""}`}
             >
-              {isAdmin ? "Administración" : isManager ? "Manager" : "Equipo"}
+              {isAdmin
+                ? "Administración"
+                : isManager
+                  ? "Manager"
+                  : role === "MARKETING"
+                    ? "Marketing"
+                    : "Equipo"}
             </span>
             <button
               type="button"

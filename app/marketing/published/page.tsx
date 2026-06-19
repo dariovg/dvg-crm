@@ -50,11 +50,13 @@ export default function PublishedPostsPage() {
   const platforms = ["all", ...new Set(posts.map((p) => p.platform))];
 
   return (
-    <div className="p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">✅ Published Posts</h1>
-        <p className="text-gray-600">History of all published social media content</p>
-      </div>
+    <div className="page-pad">
+      <header className="page-head">
+        <div>
+          <h1>Publicados</h1>
+          <p className="page-sub">Historial de contenido ya publicado en redes</p>
+        </div>
+      </header>
 
       {/* Platform filter */}
       <div className="mb-6 flex gap-2 flex-wrap">

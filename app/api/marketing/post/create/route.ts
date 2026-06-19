@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         mediaUrls,
         createdById: session.user.id,
-        status: "DRAFT",
+        status: "PENDING_APPROVAL",
       },
       include: {
         createdBy: true,
