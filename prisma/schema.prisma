@@ -22,6 +22,7 @@ enum UserRole {
   ADMIN
   MANAGER
   MEMBER
+  MARKETING
 }
 
 enum TaskPriority {
@@ -56,6 +57,24 @@ enum QuoteLineType {
   CUSTOM
 }
 
+enum SocialPostStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+  FAILED
+  REJECTED
+}
+
+enum SocialPlatform {
+  TWITTER
+  INSTAGRAM
+  TIKTOK
+  LINKEDIN
+  FACEBOOK
+}
+
 model User {
   id                   String    @id @default(cuid())
   email                String    @unique
@@ -78,6 +97,9 @@ model User {
   notifications        Notification[]
   createdQuotes        Quote[]   @relation("QuoteCreator")
   approvedQuotes       Quote[]   @relation("QuoteApprover")
+  socialPostsCreated   SocialPost[] @relation("SocialPostCreator")
+  campaignsCreated     Campaign[]   @relation("CampaignCreator")
+  postsApproved        PostApproval[] @relation("PostApproval")
 }
 
 model AppSetting {
@@ -247,4 +269,66 @@ model QuoteLine {
   packId          String?
 
   @@index([quoteId])
+}
+
+model SocialPost {
+  id              String              @id @default(cuid())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  platform        SocialPlatform
+  content         String              @db.Text
+  status          SocialPostStatus    @default(DRAFT)
+  campaignId      String?
+  campaign        Campaign?           @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  errorMessage    String?
+  createdById     String?
+  createdBy       User?               @relation("SocialPostCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  externalId      String?
+  likes           Int                 @default(0)
+  comments        Int                 @default(0)
+  shares          Int                 @default(0)
+  impressions     Int                 @default(0)
+  approvals       PostApproval[]
+  mediaUrls       String[]            @default([])
+
+  @@index([platform])
+  @@index([status])
+  @@index([campaignId])
+  @@index([createdAt])
+  @@index([publishedAt])
+}
+
+model Campaign {
+  id              String      @id @default(cuid())
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  name            String
+  description     String?     @db.Text
+  startDate       DateTime
+  endDate         DateTime?
+  status          String      @default("ACTIVE")
+  posts           SocialPost[]
+  createdById     String?
+  createdBy       User?       @relation("CampaignCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+model PostApproval {
+  id              String      @id @default(cuid())
+  createdAt       DateTime    @default(now())
+  postId          String
+  post            SocialPost  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  approvedById    String?
+  approvedBy      User?       @relation("PostApproval", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedAt      DateTime?
+  notes           String?     @db.Text
+  status          String      @default("PENDING")
+
+  @@index([postId])
+  @@index([approvedById])
+  @@index([createdAt])
 }
