@@ -32,6 +32,8 @@ import {
   packLineDescription,
 } from "@/lib/quotes";
 import { planById } from "@/lib/pricing-catalog";
+import { buildLinesFromTemplate, templateById } from "@/lib/quote-templates";
+import { generateShareToken } from "@/lib/quote-share";
 
 function appUrl() {
   return (
@@ -792,15 +794,49 @@ function revalidateQuotePaths(quoteId, contactId) {
   if (contactId) revalidatePath(`/leads/${contactId}`);
 }
 
-export async function createQuote(contactId, { packId, billing = "MONTHLY", customLines = [] } = {}) {
+export async function createQuote(
+  contactId,
+  { packId, billing = "MONTHLY", customLines = [], projectType = "IA", useTemplate = true } = {}
+) {
   const session = await requireAuthSession();
   await getContactForUser(session, contactId);
 
   const number = await generateQuoteNumber(prisma);
-  const lines = [];
+  let resolvedBilling = billing;
+  let resolvedPackId = packId;
+  let resolvedNotes = null;
+  let lines = [];
 
-  if (packId) {
-    const price = catalogPriceForPack(packId, billing);
+  if (useTemplate && projectType && templateById(projectType)) {
+    const built = buildLinesFromTemplate(
+      projectType,
+      billing,
+      catalogPriceForPack,
+      packLineDescription
+    );
+    resolvedBilling = built.billing;
+    resolvedPackId = built.packId ?? packId ?? null;
+    resolvedNotes = built.notes;
+    lines = built.lines;
+  }
+
+  if (packId && projectType === "IA") {
+    const price = catalogPriceForPack(packId, resolvedBilling);
+    const nonPack = lines.filter((l) => l.type !== "PACK");
+    lines = [
+      {
+        type: "PACK",
+        packId,
+        description: packLineDescription(packId),
+        quantity: 1,
+        unitPrice: price,
+        sortOrder: 0,
+      },
+      ...nonPack.map((l, i) => ({ ...l, sortOrder: i + 1 })),
+    ];
+    resolvedPackId = packId;
+  } else if (!lines.length && packId) {
+    const price = catalogPriceForPack(packId, resolvedBilling);
     lines.push({
       type: "PACK",
       packId,
@@ -809,6 +845,7 @@ export async function createQuote(contactId, { packId, billing = "MONTHLY", cust
       unitPrice: price,
       sortOrder: 0,
     });
+    resolvedPackId = packId;
   }
 
   customLines.forEach((line, i) => {
@@ -827,8 +864,10 @@ export async function createQuote(contactId, { packId, billing = "MONTHLY", cust
       number,
       contactId,
       createdById: actorId(session),
-      billing,
-      packId: packId || null,
+      billing: resolvedBilling,
+      packId: resolvedPackId || null,
+      projectType: projectType || "IA",
+      notes: resolvedNotes,
       validUntil: defaultValidUntil(),
       lines: { create: lines },
     },
@@ -848,7 +887,7 @@ export async function createQuote(contactId, { packId, billing = "MONTHLY", cust
   return { ok: true, quoteId: quote.id };
 }
 
-export async function updateQuote(quoteId, { lines, billing, notes, discountPercent, packId }) {
+export async function updateQuote(quoteId, { lines, billing, notes, discountPercent, packId, projectType }) {
   const session = await requireAuthSession();
   const quote = await getQuoteForUser(session, quoteId);
   if (!canEditQuote(session, quote)) throw new Error("No autorizado");
@@ -859,6 +898,7 @@ export async function updateQuote(quoteId, { lines, billing, notes, discountPerc
   const data = {};
   if (billing !== undefined) data.billing = billing;
   if (notes !== undefined) data.notes = notes?.trim() || null;
+  if (projectType !== undefined) data.projectType = projectType;
   if (discountPercent !== undefined) {
     data.discountPercent =
       discountPercent === "" || discountPercent == null
@@ -1006,7 +1046,16 @@ export async function markQuoteSent(quoteId) {
 
   await prisma.quote.update({
     where: { id: quoteId },
-    data: { status: "SENT", sentAt: new Date() },
+    data: {
+      status: "SENT",
+      sentAt: new Date(),
+      shareToken: quote.shareToken || generateShareToken(),
+    },
+  });
+
+  const updated = await prisma.quote.findUnique({
+    where: { id: quoteId },
+    select: { shareToken: true },
   });
 
   await prisma.contactEvent.create({
@@ -1019,6 +1068,7 @@ export async function markQuoteSent(quoteId) {
   });
 
   revalidateQuotePaths(quoteId, quote.contactId);
+  if (updated?.shareToken) revalidatePath(`/p/${updated.shareToken}`);
   revalidatePath("/leads");
   revalidatePath("/pipeline");
   return { ok: true };
@@ -1060,6 +1110,7 @@ export async function duplicateQuote(quoteId) {
       status: "DRAFT",
       billing: quote.billing,
       packId: quote.packId,
+      projectType: quote.projectType,
       discountPercent: quote.discountPercent,
       notes: quote.notes,
       validUntil: defaultValidUntil(),
@@ -1079,6 +1130,37 @@ export async function duplicateQuote(quoteId) {
 
   revalidateQuotePaths(newQuote.id, quote.contactId);
   return { ok: true, quoteId: newQuote.id };
+}
+
+export async function applyQuoteTemplate(quoteId, projectType) {
+  const session = await requireAuthSession();
+  const quote = await getQuoteForUser(session, quoteId);
+  if (!canEditQuote(session, quote)) throw new Error("No autorizado");
+  if (["SENT", "ACCEPTED"].includes(quote.status)) {
+    throw new Error("No se puede cambiar la plantilla de un presupuesto enviado");
+  }
+  if (!templateById(projectType)) throw new Error("Plantilla no válida");
+
+  const built = buildLinesFromTemplate(
+    projectType,
+    quote.billing,
+    catalogPriceForPack,
+    packLineDescription
+  );
+
+  await prisma.quote.update({
+    where: { id: quoteId },
+    data: {
+      projectType,
+      billing: built.billing,
+      packId: built.packId,
+      notes: built.notes,
+    },
+  });
+  await syncQuoteLines(quoteId, built.lines);
+
+  revalidateQuotePaths(quoteId, quote.contactId);
+  return { ok: true };
 }
 
 export async function fetchScopedQuotes(filters = {}) {
