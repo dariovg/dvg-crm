@@ -1,3 +1,6 @@
+# Copia este archivo a .github/workflows/ci.yml en GitHub
+# (requiere token con scope `workflow` para push desde CLI)
+
 name: CI
 
 on:
