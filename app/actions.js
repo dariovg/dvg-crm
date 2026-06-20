@@ -15,6 +15,7 @@ import {
   canApproveQuote,
   canEditQuote,
   canAccessSalesCrm,
+  canDeleteContact,
   contactScope,
   isStaff,
   quoteScope,
@@ -271,6 +272,29 @@ export async function updateContactProfile(contactId, data) {
   revalidatePath(`/leads/${contactId}`);
   revalidatePath("/leads");
   revalidatePath("/pipeline");
+  return { ok: true };
+}
+
+export async function deleteContact(contactId) {
+  const session = await requireStaffSession();
+  if (!canDeleteContact(session)) throw new Error("Sin permiso");
+
+  const contact = await getContactForUser(session, contactId);
+
+  await recordAudit({
+    userId: actorId(session),
+    action: "contact.deleted",
+    entityType: "contact",
+    entityId: contactId,
+    summary: `Lead eliminado: ${contact.name} (${contact.email})`,
+    payload: { source: contact.source, status: contact.status },
+  });
+
+  await prisma.contact.delete({ where: { id: contactId } });
+
+  revalidatePath("/leads");
+  revalidatePath("/pipeline");
+  revalidatePath("/dashboard");
   return { ok: true };
 }
 

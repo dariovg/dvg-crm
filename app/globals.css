@@ -1147,6 +1147,14 @@ body {
 .card-muted {
   background: var(--card-bg-muted);
 }
+.contact-editor-danger {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(185, 28, 28, 0.2);
+}
+.contact-editor-danger .btn-danger {
+  margin-top: 0.5rem;
+}
 .form-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 .form-error { color: #b91c1c; font-size: .85rem; }
 .alert-warn {

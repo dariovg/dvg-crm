@@ -8,6 +8,7 @@ import {
   assignContact,
   updateContactDetails,
   updateContactProfile,
+  deleteContact,
 } from "@/app/actions";
 import { CONTACT_STATUSES, LOST_REASONS } from "@/lib/constants";
 
@@ -15,6 +16,7 @@ export default function ContactEditor({
   contact,
   team = [],
   canAssign = false,
+  canDelete = false,
 }) {
   const router = useRouter();
   const [name, setName] = useState(contact.name || "");
@@ -30,6 +32,24 @@ export default function ContactEditor({
   const [tags, setTags] = useState((contact.tags || []).join(", "));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    const ok = window.confirm(
+      `¿Eliminar el lead "${contact.name}"?\n\nSe borrarán también citas, tareas, presupuestos e historial. Esta acción no se puede deshacer.`
+    );
+    if (!ok) return;
+    setDeleting(true);
+    setError("");
+    try {
+      await deleteContact(contact.id);
+      router.push("/leads");
+      router.refresh();
+    } catch (err) {
+      setError(err.message);
+      setDeleting(false);
+    }
+  }
 
   async function saveProfile(e) {
     e.preventDefault();
@@ -248,6 +268,23 @@ export default function ContactEditor({
           Guardar notas
         </button>
       </form>
+
+      {canDelete && (
+        <div className="contact-editor-danger">
+          <h3 className="contact-editor-sub">Zona de peligro</h3>
+          <p className="muted">
+            Elimina el lead y todos sus datos relacionados (citas, tareas, presupuestos).
+          </p>
+          <button
+            type="button"
+            className="btn-danger"
+            onClick={handleDelete}
+            disabled={deleting || saving}
+          >
+            {deleting ? "Eliminando…" : "Eliminar lead"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -11,7 +11,7 @@ import TaskList from "@/components/TaskList";
 import LeadTimeline from "@/components/LeadTimeline";
 import { SOURCE_LABEL } from "@/lib/constants";
 import { getAuthSession, listTeamUsers } from "@/lib/auth-server";
-import { canAccessContact, canAssignContacts, isAdmin, isStaff } from "@/lib/permissions";
+import { canAccessContact, canAssignContacts, canDeleteContact, isAdmin, isStaff } from "@/lib/permissions";
 import { isMailConfigured } from "@/lib/mail";
 import { getScoringRules } from "@/lib/crm-settings";
 import { computeLeadScore } from "@/lib/lead-score";
@@ -20,6 +20,7 @@ export default async function LeadDetailPage({ params }) {
   const { id } = await params;
   const session = await getAuthSession();
   const canAssign = canAssignContacts(session);
+  const canDelete = canDeleteContact(session);
   const staff = isStaff(session);
 
   const contact = await prisma.contact.findUnique({
@@ -114,7 +115,12 @@ export default async function LeadDetailPage({ params }) {
         </div>
 
         <div>
-          <ContactEditor contact={contact} team={team} canAssign={canAssign} />
+          <ContactEditor
+            contact={contact}
+            team={team}
+            canAssign={canAssign}
+            canDelete={canDelete}
+          />
           <TaskForm contactId={contact.id} team={team} canAssign={canAssign} />
           {contact.tasks.length > 0 && (
             <div className="card task-list-card">
