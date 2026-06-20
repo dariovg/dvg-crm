@@ -12,6 +12,7 @@ const GROUPS = [
     label: "Contenido",
     items: [
       { href: "/marketing/create", label: "Crear" },
+      { href: "/marketing/calendario", label: "Calendario" },
       { href: "/marketing/semana", label: "Semana" },
     ],
   },

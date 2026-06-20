@@ -2881,6 +2881,173 @@ body {
 [data-theme="dark"] .post-preview-card {
   background: var(--card-bg-muted);
 }
+
+/* Editorial calendar */
+.editorial-calendar-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.editorial-calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.editorial-calendar-title {
+  font-size: 1rem;
+  color: var(--text-heading);
+  margin-left: 0.35rem;
+  text-transform: capitalize;
+}
+.editorial-calendar-views {
+  display: flex;
+  gap: 0.4rem;
+}
+.editorial-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.editorial-cal-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+}
+.editorial-cal-legend-item::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.editorial-cal-legend-item--pending::before { background: #f59e0b; }
+.editorial-cal-legend-item--approved::before { background: var(--secondary); }
+.editorial-cal-legend-item--scheduled::before { background: var(--gold); }
+.editorial-cal-legend-item--published::before { background: var(--success); }
+.editorial-calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+  padding: 0 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: center;
+}
+.editorial-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.35rem;
+}
+.editorial-calendar-grid--week {
+  min-height: 280px;
+}
+.editorial-calendar-day {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-height: 88px;
+  padding: 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: var(--shadow-sm);
+}
+.editorial-calendar-grid--week .editorial-calendar-day {
+  min-height: 200px;
+}
+.editorial-calendar-day--today {
+  border-color: rgba(255, 107, 53, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(255, 107, 53, 0.2);
+}
+.editorial-calendar-day--muted {
+  opacity: 0.45;
+}
+.editorial-calendar-day-num {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--text-heading);
+}
+.editorial-calendar-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+  min-height: 0;
+}
+.editorial-cal-event {
+  display: block;
+  text-decoration: none;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  padding: 0.35rem 0.4rem;
+  border-radius: 6px;
+  border-left: 3px solid var(--border-strong);
+  background: var(--card-bg-muted);
+  color: inherit;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.editorial-cal-event:hover {
+  background: var(--surface-alt);
+  transform: translateX(2px);
+}
+.editorial-cal-event-platform {
+  font-weight: 800;
+  color: var(--orange);
+  margin-right: 0.25rem;
+}
+.editorial-cal-event-text {
+  color: var(--text-primary);
+}
+.editorial-cal-event-status {
+  display: block;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+}
+.editorial-cal-event--pending_approval,
+.editorial-cal-event--pending {
+  border-left-color: #f59e0b;
+}
+.editorial-cal-event--approved {
+  border-left-color: var(--secondary);
+}
+.editorial-cal-event--scheduled {
+  border-left-color: var(--gold);
+}
+.editorial-cal-event--published {
+  border-left-color: var(--success);
+}
+.editorial-cal-event--rejected {
+  border-left-color: #ef4444;
+  opacity: 0.7;
+}
+@media (max-width: 900px) {
+  .editorial-calendar-weekdays { display: none; }
+  .editorial-calendar-grid {
+    grid-template-columns: 1fr;
+  }
+  .editorial-calendar-day--muted { display: none; }
+  .editorial-calendar-grid--month .editorial-calendar-day:not(.editorial-calendar-day--muted) {
+    min-height: auto;
+  }
+}
+[data-theme="dark"] .editorial-calendar-day {
+  background: var(--card-bg);
+}
+[data-theme="dark"] .editorial-cal-event {
+  background: var(--surface-alt);
+}
 .marketing-tips-list {
   margin: 0;
   padding-left: 1.1rem;
