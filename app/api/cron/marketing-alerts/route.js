@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { alertStalePendingPosts } from "@/lib/social/alerts.js";
+import { sendWeeklyReportIfDue } from "@/lib/weekly-report.js";
 import { rateLimitResponse } from "@/lib/rate-limit";
 
-/** Cron: alerta Slack/email si hay posts pendientes de aprobación >24h. */
+/** Cron: alertas marketing + informe semanal (Hobby: un solo slot diario). */
 export async function GET(req) {
   const limited = rateLimitResponse(req, "cron-marketing-alerts", {
     limit: 10,
@@ -22,8 +23,14 @@ export async function GET(req) {
   }
 
   try {
-    const result = await alertStalePendingPosts();
-    return NextResponse.json({ ok: true, ...result });
+    const alerts = await alertStalePendingPosts();
+    let weeklyReport = null;
+    try {
+      weeklyReport = await sendWeeklyReportIfDue();
+    } catch (weeklyErr) {
+      console.error("cron weekly-report:", weeklyErr);
+    }
+    return NextResponse.json({ ok: true, alerts, weeklyReport });
   } catch (err) {
     console.error("cron/marketing-alerts:", err);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
