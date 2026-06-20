@@ -8,6 +8,11 @@ interface PublishFormProps {
   onSubmit?: (data: unknown) => Promise<void>;
   onCancel?: () => void;
   initialContent?: string;
+  onPreviewChange?: (data: {
+    platform: SocialPlatform;
+    content: string;
+    imageUrl: string;
+  }) => void;
 }
 
 const PLATFORMS: {
@@ -32,6 +37,7 @@ export function PublishForm({
   onSubmit,
   onCancel,
   initialContent = "",
+  onPreviewChange,
 }: PublishFormProps) {
   const [formData, setFormData] = useState({
     platform: "TWITTER" as SocialPlatform,
@@ -61,6 +67,14 @@ export function PublishForm({
       setFormData((f) => ({ ...f, content: initialContent }));
     }
   }, [initialContent]);
+
+  useEffect(() => {
+    onPreviewChange?.({
+      platform: formData.platform,
+      content: formData.content,
+      imageUrl: formData.imageUrl,
+    });
+  }, [formData.platform, formData.content, formData.imageUrl, onPreviewChange]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

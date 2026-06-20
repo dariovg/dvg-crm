@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { SocialPlatform } from "@prisma/client";
 import { PublishForm } from "@/components/marketing/PublishForm";
+import PostPreview from "@/components/marketing/PostPreview";
 
 const TEMPLATES = [
   {
@@ -23,6 +25,18 @@ const TEMPLATES = [
 
 export default function CreateContentClient() {
   const [template, setTemplate] = useState<string | undefined>();
+  const [preview, setPreview] = useState({
+    platform: "TWITTER" as SocialPlatform,
+    content: "",
+    imageUrl: "",
+  });
+
+  const handlePreviewChange = useCallback(
+    (data: { platform: SocialPlatform; content: string; imageUrl: string }) => {
+      setPreview(data);
+    },
+    []
+  );
 
   return (
     <>
@@ -49,8 +63,15 @@ export default function CreateContentClient() {
         <PublishForm
           key={template ?? "empty"}
           initialContent={template}
+          onPreviewChange={handlePreviewChange}
         />
-        <aside className="panel marketing-tips">
+        <aside className="marketing-create-aside">
+          <PostPreview
+            platform={preview.platform}
+            content={preview.content}
+            imageUrl={preview.imageUrl}
+          />
+          <div className="panel marketing-tips">
           <h2 className="panel-title">Rutina diaria</h2>
           <ol className="marketing-daily-steps">
             <li>
@@ -71,6 +92,7 @@ export default function CreateContentClient() {
             <li>1 idea clara + 1 CTA + 2-3 hashtags</li>
             <li>Publicar entre 9–11 h entre semana</li>
           </ul>
+          </div>
         </aside>
       </div>
     </>
