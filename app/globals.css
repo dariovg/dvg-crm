@@ -3100,7 +3100,24 @@ body {
   border: 1px solid var(--border-strong);
 }
 .btn-secondary:hover { background: var(--card-bg-muted); }
-.page-pad { padding: 0; }
+.page-head-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.65rem;
+}
+.sync-metrics-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+.sync-metrics-msg {
+  font-size: 0.78rem;
+  margin: 0;
+  max-width: 280px;
+  text-align: right;
+}
 .page-head {
   display: flex;
   align-items: flex-start;

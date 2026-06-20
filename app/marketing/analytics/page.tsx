@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth-options";
 import { canAccessMarketing } from "@/lib/permissions";
 import { getMarketingAnalytics } from "@/lib/marketing-stats";
 import AnalyticsWidget from "@/components/marketing/AnalyticsWidget";
+import SyncMetricsButton from "@/components/marketing/SyncMetricsButton";
 
 export default async function AnalyticsPage() {
   const session = await getServerSession(authOptions);
@@ -22,11 +23,15 @@ export default async function AnalyticsPage() {
           <h1>Analítica</h1>
           <p className="page-sub">
             Métricas de los últimos 30 días · {analytics.postCount} posts publicados
+            {analytics.postCount > 0 && " · datos desde X y TikTok"}
           </p>
         </div>
-        <Link href="/marketing" className="text-link">
-          ← Volver al resumen
-        </Link>
+        <div className="page-head-actions">
+          <SyncMetricsButton />
+          <Link href="/marketing" className="text-link">
+            ← Volver al resumen
+          </Link>
+        </div>
       </header>
 
       <div className="marketing-kpi-grid marketing-kpi-grid--widgets">
@@ -70,8 +75,8 @@ export default async function AnalyticsPage() {
         </div>
         {analytics.postCount === 0 && (
           <p className="muted" style={{ marginTop: "1rem" }}>
-            Aún no hay posts publicados con métricas. Cuando apruebes y publiques
-            contenido, verás datos aquí.
+            Aún no hay posts publicados con métricas. Publica contenido y pulsa
+            &quot;Sincronizar métricas&quot; para traer datos de X y TikTok.
           </p>
         )}
       </section>

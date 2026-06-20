@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { publishDueScheduledPosts } from "@/lib/social/publish.js";
 import { syncAllPublishedMetrics } from "@/lib/social/metrics.js";
 
-/** Vercel Cron: publica posts programados y sincroniza métricas. */
+/** Cron: sincroniza métricas de posts publicados desde X/TikTok. */
 export async function GET(req) {
   const auth = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
@@ -16,22 +15,10 @@ export async function GET(req) {
   }
 
   try {
-    const results = await publishDueScheduledPosts();
-    let metrics = null;
-    try {
-      const payload = await syncAllPublishedMetrics({ days: 60, limit: 40 });
-      metrics = payload.summary;
-    } catch (metricsErr) {
-      console.error("cron metrics sync:", metricsErr);
-    }
-    return NextResponse.json({
-      ok: true,
-      published: results.length,
-      results,
-      metrics,
-    });
+    const payload = await syncAllPublishedMetrics({ days: 90, limit: 60 });
+    return NextResponse.json({ ok: true, ...payload });
   } catch (err) {
-    console.error("cron/publish-scheduled:", err);
+    console.error("cron/sync-metrics:", err);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }
