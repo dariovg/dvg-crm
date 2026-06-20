@@ -1268,6 +1268,35 @@ body {
   padding: .65rem 1rem;
   margin-bottom: .75rem;
   font-size: .88rem;
+  flex-wrap: wrap;
+}
+.bulk-bar--sticky {
+  position: sticky;
+  top: .5rem;
+  z-index: 20;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, .08);
+}
+.bulk-bar-count {
+  font-weight: 700;
+  color: var(--navy);
+  margin-right: auto;
+}
+.leads-bulk-hint {
+  font-size: .85rem;
+  color: var(--gray);
+  margin: 0 0 .75rem;
+}
+.bulk-bar .btn-danger {
+  background: #dc2626;
+  color: #fff;
+  border: 1px solid #b91c1c;
+}
+.bulk-bar .btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+.bulk-bar .btn-danger:disabled {
+  opacity: .6;
+  cursor: not-allowed;
 }
 .th-check { width: 36px; }
 .tag-list { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .25rem; }

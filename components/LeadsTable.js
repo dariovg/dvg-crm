@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { assignContact, bulkAssignContacts, deleteContact } from "@/app/actions";
+import { assignContact, bulkAssignContacts, bulkDeleteContacts, deleteContact } from "@/app/actions";
 import StatusBadge from "@/components/StatusBadge";
 import AssigneeBadge from "@/components/AssigneeBadge";
 import LeadScoreBadge from "@/components/LeadScoreBadge";
@@ -158,11 +158,25 @@ export function LeadsTable({ contacts, team, canAssign, canDelete = false }) {
   const [selected, setSelected] = useState([]);
   const [bulkAssignee, setBulkAssignee] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const showSelection = canAssign || canDelete;
+  const contactIds = contacts.map((c) => c.id);
+  const allSelected =
+    contacts.length > 0 && contactIds.every((id) => selected.includes(id));
 
   function toggle(id) {
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
+  }
+
+  function toggleAll() {
+    setSelected(allSelected ? [] : contactIds);
+  }
+
+  function clearSelection() {
+    setSelected([]);
   }
 
   async function onAssign(contactId, assigneeId) {
@@ -175,6 +189,30 @@ export function LeadsTable({ contacts, team, canAssign, canDelete = false }) {
     await bulkAssignContacts(selected, bulkAssignee || null);
     setSelected([]);
     router.refresh();
+  }
+
+  async function runBulkDelete() {
+    if (!selected.length) return;
+    const preview = contacts
+      .filter((c) => selected.includes(c.id))
+      .map((c) => c.name)
+      .slice(0, 5);
+    const more =
+      selected.length > 5 ? `\n…y ${selected.length - 5} más` : "";
+    const ok = window.confirm(
+      `¿Eliminar ${selected.length} lead(s)?\n\n${preview.join(", ")}${more}\n\nSe borrarán citas, tareas, presupuestos e historial. No se puede deshacer.`
+    );
+    if (!ok) return;
+    setBulkDeleting(true);
+    try {
+      await bulkDeleteContacts(selected);
+      setSelected([]);
+      router.refresh();
+    } catch (err) {
+      window.alert(err.message || "No se pudieron eliminar los leads");
+    } finally {
+      setBulkDeleting(false);
+    }
   }
 
   async function handleDelete(contact) {
@@ -195,31 +233,68 @@ export function LeadsTable({ contacts, team, canAssign, canDelete = false }) {
 
   return (
     <>
-      {canAssign && selected.length > 0 && (
-        <div className="bulk-bar">
-          <span>{selected.length} seleccionados</span>
-          <select
-            className="assign-select"
-            value={bulkAssignee}
-            onChange={(e) => setBulkAssignee(e.target.value)}
+      {showSelection && selected.length > 0 && (
+        <div className="bulk-bar bulk-bar--sticky">
+          <span className="bulk-bar-count">
+            {selected.length} seleccionado{selected.length !== 1 ? "s" : ""}
+          </span>
+          <button
+            type="button"
+            className="btn-sm btn-ghost"
+            onClick={clearSelection}
+            disabled={bulkDeleting}
           >
-            <option value="">Sin asignar</option>
-            {team.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name || u.email}
-              </option>
-            ))}
-          </select>
-          <button type="button" className="btn-sm" onClick={runBulk}>
-            Asignar
+            Desmarcar
           </button>
+          {canAssign && (
+            <>
+              <select
+                className="assign-select"
+                value={bulkAssignee}
+                onChange={(e) => setBulkAssignee(e.target.value)}
+                disabled={bulkDeleting}
+              >
+                <option value="">Sin asignar</option>
+                {team.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name || u.email}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn-sm"
+                onClick={runBulk}
+                disabled={bulkDeleting}
+              >
+                Asignar
+              </button>
+            </>
+          )}
+          {canDelete && (
+            <button
+              type="button"
+              className="btn-sm btn-danger"
+              onClick={runBulkDelete}
+              disabled={bulkDeleting}
+            >
+              {bulkDeleting
+                ? "Eliminando…"
+                : `Eliminar ${selected.length} lead${selected.length !== 1 ? "s" : ""}`}
+            </button>
+          )}
         </div>
+      )}
+      {showSelection && contacts.length > 0 && selected.length === 0 && canDelete && (
+        <p className="leads-bulk-hint">
+          Marca los leads con la casilla y usa <strong>Eliminar seleccionados</strong> en la barra superior.
+        </p>
       )}
       <div className="leads-cards">
         {contacts.map((c) => (
           <article key={c.id} className="lead-card">
             <div className="lead-card-head">
-              {canAssign && (
+              {showSelection && (
                 <input
                   type="checkbox"
                   className="lead-card-check"
@@ -298,7 +373,17 @@ export function LeadsTable({ contacts, team, canAssign, canDelete = false }) {
         <table className="data-table">
           <thead>
             <tr>
-              {canAssign && <th className="th-check" />}
+              {showSelection && (
+                <th className="th-check">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleAll}
+                    aria-label="Seleccionar todos"
+                    title="Seleccionar todos"
+                  />
+                </th>
+              )}
               <th>Nombre</th>
               <th>Email</th>
               <th>Valor</th>
@@ -313,12 +398,13 @@ export function LeadsTable({ contacts, team, canAssign, canDelete = false }) {
           <tbody>
             {contacts.map((c) => (
               <tr key={c.id}>
-                {canAssign && (
+                {showSelection && (
                   <td>
                     <input
                       type="checkbox"
                       checked={selected.includes(c.id)}
                       onChange={() => toggle(c.id)}
+                      aria-label={`Seleccionar ${c.name}`}
                     />
                   </td>
                 )}

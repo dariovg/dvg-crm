@@ -298,6 +298,39 @@ export async function deleteContact(contactId) {
   return { ok: true };
 }
 
+export async function bulkDeleteContacts(contactIds) {
+  const session = await requireStaffSession();
+  if (!canDeleteContact(session)) throw new Error("Sin permiso");
+  if (!contactIds?.length) return { ok: true, deleted: 0 };
+
+  const unique = [...new Set(contactIds)];
+  let deleted = 0;
+
+  for (const contactId of unique) {
+    const contact = await prisma.contact.findUnique({ where: { id: contactId } });
+    if (!contact || !canAccessContact(session, contact)) continue;
+
+    await recordAudit({
+      userId: actorId(session),
+      action: "contact.deleted",
+      entityType: "contact",
+      entityId: contactId,
+      summary: `Lead eliminado (masivo): ${contact.name} (${contact.email})`,
+      payload: { source: contact.source, status: contact.status, bulk: true },
+    });
+
+    await prisma.contact.delete({ where: { id: contactId } });
+    deleted++;
+  }
+
+  if (deleted === 0) throw new Error("No se pudo eliminar ningún lead");
+
+  revalidatePath("/leads");
+  revalidatePath("/pipeline");
+  revalidatePath("/dashboard");
+  return { ok: true, deleted };
+}
+
 export async function assignContact(contactId, assigneeId) {
   const session = await requireStaffSession();
   const assignee = assigneeId
