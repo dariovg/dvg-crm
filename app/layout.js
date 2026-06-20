@@ -1,4 +1,11 @@
+import { Inter } from "next/font/google";
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const metadata = {
   title: "DVG CRM",
@@ -7,7 +14,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning className={inter.variable}>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -15,7 +22,7 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body>{children}</body>
+      <body className={inter.className}>{children}</body>
     </html>
   );
 }

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { getNavLinksForSession } from "@/lib/nav-links";
 import ThemeToggle from "@/components/ThemeToggle";
+import NavIcon from "@/components/NavIcon";
 
 export default function Sidebar() {
   const { data: session } = useSession();
@@ -48,7 +49,8 @@ export default function Sidebar() {
             href={l.href}
             className={`sidebar-link${isActive(l.href) ? " sidebar-link--active" : ""}`}
           >
-            {l.label}
+            <NavIcon name={l.icon} className="sidebar-link-icon" />
+            <span>{l.label}</span>
           </Link>
         ))}
       </nav>
@@ -61,7 +63,8 @@ export default function Sidebar() {
         )}
         {isAdmin && (
           <a href="/api/export/leads" className="sidebar-link export-link">
-            Exportar CSV
+            <NavIcon name="export" className="sidebar-link-icon" />
+            <span>Exportar CSV</span>
           </a>
         )}
         {session?.user && (

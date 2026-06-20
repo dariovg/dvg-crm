@@ -6,63 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import { getNavLinksForSession, getTabLinksForSession } from "@/lib/nav-links";
 import { canAccessSalesCrm } from "@/lib/permissions";
 import ThemeToggle from "@/components/ThemeToggle";
-
-function NavIcon({ name }) {
-  const icons = {
-    dashboard: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-      </svg>
-    ),
-    leads: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
-    pipeline: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-        <rect x="3" y="3" width="5" height="18" rx="1" />
-        <rect x="10" y="8" width="5" height="13" rx="1" />
-        <rect x="17" y="5" width="4" height="16" rx="1" />
-      </svg>
-    ),
-    tasks: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-        <path d="M9 11l3 3L22 4" />
-        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-      </svg>
-    ),
-    marketing: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-        <path d="M12 2L2 7l10 5 10-5-10-5z" />
-        <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
-      </svg>
-    ),
-    more: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-        <circle cx="12" cy="12" r="1" />
-        <circle cx="12" cy="5" r="1" />
-        <circle cx="12" cy="19" r="1" />
-      </svg>
-    ),
-    menu: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-        <path d="M4 6h16M4 12h16M4 18h16" />
-      </svg>
-    ),
-    close: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-        <path d="M18 6L6 18M6 6l12 12" />
-      </svg>
-    ),
-  };
-  return icons[name] || null;
-}
+import NavIcon from "@/components/NavIcon";
 
 export function HamburgerButton({ open, onClick }) {
   return (
@@ -123,7 +67,8 @@ export function MobileDrawer({ open, onClose }) {
               className={`mobile-drawer-link${isActive(l.href) ? " mobile-drawer-link--active" : ""}`}
               onClick={handleLinkClick}
             >
-              {l.label}
+              <NavIcon name={l.icon} size={20} />
+              <span>{l.label}</span>
             </Link>
           ))}
         </nav>
@@ -202,7 +147,7 @@ export function BottomTabBar({ onMoreClick }) {
           href={tab.href}
           className={`bottom-tab${isActive(tab.href) ? " bottom-tab--active" : ""}`}
         >
-          <NavIcon name={tab.href.replace("/", "") === "dashboard" ? "dashboard" : tab.href.slice(1)} />
+          <NavIcon name={tab.icon} size={20} />
           <span>{tab.short}</span>
         </Link>
       ))}
