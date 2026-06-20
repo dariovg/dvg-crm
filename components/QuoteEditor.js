@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Accordion from "@/components/Accordion";
 import QuoteLineEditor from "@/components/QuoteLineEditor";
+import QuoteServicesPicker from "@/components/QuoteServicesPicker";
 import QuoteSharePanel from "@/components/QuoteSharePanel";
 import QuoteStatusBadge from "@/components/QuoteStatusBadge";
 import {
@@ -15,9 +16,8 @@ import {
   markQuoteAccepted,
   duplicateQuote,
 } from "@/app/actions";
-import { PLANS, formatEuro, packLineDescription } from "@/lib/pricing-catalog";
+import { formatEuro } from "@/lib/pricing-catalog";
 import {
-  catalogPriceForPack,
   computeQuoteSubtotal,
   computeQuoteTotal,
   computeQuoteVat,
@@ -27,11 +27,6 @@ import {
   VAT_RATE,
 } from "@/lib/quotes";
 import {
-  QUOTE_PROJECT_LABEL,
-  QUOTE_TEMPLATES,
-  isTemplateInLines,
-  appendTemplateLines,
-  removeTemplateFromLines,
   resolveQuoteProjectLabel,
   inferProjectTypeFromLines,
 } from "@/lib/quote-templates";
@@ -70,64 +65,6 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
   const vatPercent = Math.round(VAT_RATE * 100);
   const requiresApproval = needsApproval({ billing, discountPercent: discountPercent || null }, lines);
   const projectLabel = resolveQuoteProjectLabel(lines, projectType);
-
-  function syncPackPrices(nextBilling) {
-    setLines((prev) =>
-      prev.map((line) => {
-        if (line.type === "PACK" && line.packId) {
-          return {
-            ...line,
-            unitPrice: catalogPriceForPack(line.packId, nextBilling),
-          };
-        }
-        return line;
-      })
-    );
-  }
-
-  function handleBillingChange(next) {
-    setBilling(next);
-    syncPackPrices(next);
-  }
-
-  function addPack(packId) {
-    if (lines.some((l) => l.type === "PACK" && l.packId === packId)) return;
-    const price = catalogPriceForPack(packId, billing);
-    setLines([
-      ...lines,
-      {
-        type: "PACK",
-        packId,
-        description: packLineDescription(packId),
-        quantity: 1,
-        unitPrice: price,
-        sortOrder: lines.length,
-      },
-    ]);
-  }
-
-  function removePack(packId) {
-    setLines(lines.filter((l) => !(l.type === "PACK" && l.packId === packId)));
-  }
-
-  function toggleTemplate(type) {
-    if (readOnly) return;
-    let nextLines;
-    if (isTemplateInLines(type, lines)) {
-      nextLines = removeTemplateFromLines(type, lines);
-    } else {
-      const added = appendTemplateLines(
-        type,
-        billing,
-        lines,
-        catalogPriceForPack,
-        packLineDescription
-      );
-      nextLines = [...lines, ...added].map((l, i) => ({ ...l, sortOrder: i }));
-    }
-    setLines(nextLines);
-    setProjectType(inferProjectTypeFromLines(nextLines, projectType));
-  }
 
   async function handleSave() {
     setBusy(true);
@@ -267,63 +204,16 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
           defaultOpen
           badge={formatEuro(totalWithVat)}
         >
-          <p className="muted quote-pack-hint" style={{ marginTop: 0 }}>
-            Pulsa cada servicio para <strong>añadirlo o quitarlo</strong>. Puedes combinar, por ejemplo,{" "}
-            <strong>Web / App + Agente IA</strong> en el mismo presupuesto.
-          </p>
-          <div className="quote-template-picker">
-            {Object.values(QUOTE_TEMPLATES).map((tpl) => {
-              const added = isTemplateInLines(tpl.id, lines);
-              return (
-              <button
-                key={tpl.id}
-                type="button"
-                className={`quote-template-btn${
-                  added ? " quote-template-btn--active" : ""
-                }`}
-                onClick={() => toggleTemplate(tpl.id)}
-                disabled={busy}
-                title={added ? "Quitar servicio del presupuesto" : "Añadir servicio al presupuesto"}
-              >
-                <strong>{tpl.label}</strong>
-                <span>
-                  {tpl.description}
-                  {added ? " · Añadido" : " · Pulsa para añadir"}
-                </span>
-              </button>
-            );
-            })}
-          </div>
-          <div className="field">
-            <label>Facturación</label>
-            <select value={billing} onChange={(e) => handleBillingChange(e.target.value)}>
-              <option value="MONTHLY">Mensual</option>
-              <option value="ANNUAL">Anual (−15%)</option>
-            </select>
-          </div>
-          <div className="quote-pack-picker">
-            {PLANS.map((plan) => {
-              const selected = lines.some((l) => l.type === "PACK" && l.packId === plan.id);
-              return (
-                <button
-                  key={plan.id}
-                  type="button"
-                  className={`quote-pack-btn${selected ? " quote-pack-btn--active" : ""}`}
-                  onClick={() => (selected ? removePack(plan.id) : addPack(plan.id))}
-                  title={selected ? "Quitar plan del presupuesto" : "Añadir plan al presupuesto"}
-                >
-                  <strong>{plan.name}</strong>
-                  <span>
-                    {formatEuro(catalogPriceForPack(plan.id, billing))}/mes
-                    {selected ? " · Añadido" : ""}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <p className="muted quote-pack-hint">
-            Los planes IA (Starter, Pro…) se suman igual: pulsa para añadir o quitar cada uno.
-          </p>
+          <QuoteServicesPicker
+            lines={lines}
+            onChange={(next) => {
+              setLines(next);
+              setProjectType(inferProjectTypeFromLines(next, projectType));
+            }}
+            billing={billing}
+            onBillingChange={setBilling}
+            disabled={busy || readOnly}
+          />
         </Accordion>
       )}
 

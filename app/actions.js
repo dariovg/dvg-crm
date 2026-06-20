@@ -1007,7 +1007,14 @@ function revalidateQuotePaths(quoteId, contactId) {
 
 export async function createQuote(
   contactId,
-  { packId, billing = "MONTHLY", customLines = [], projectType = "IA", useTemplate = true } = {}
+  {
+    lines: inputLines,
+    packId,
+    billing = "MONTHLY",
+    customLines = [],
+    projectType = "IA",
+    useTemplate = true,
+  } = {}
 ) {
   const session = await requireAuthSession();
   await getContactForUser(session, contactId);
@@ -1016,9 +1023,23 @@ export async function createQuote(
   let resolvedBilling = billing;
   let resolvedPackId = packId;
   let resolvedNotes = null;
+  let resolvedProjectType = projectType || "IA";
   let lines = [];
 
-  if (useTemplate && projectType && templateById(projectType)) {
+  if (inputLines?.length) {
+    lines = inputLines.map((l, i) => ({
+      type: l.type,
+      packId: l.packId ?? null,
+      description: l.description,
+      quantity: l.quantity ?? 1,
+      unitPrice: l.unitPrice ?? 0,
+      discountPercent: l.discountPercent ?? null,
+      sortOrder: i,
+    }));
+    if (!lines.length) throw new Error("Añade al menos un servicio al presupuesto");
+    resolvedProjectType = inferProjectTypeFromLines(lines, projectType);
+    resolvedPackId = lines.find((l) => l.type === "PACK")?.packId ?? null;
+  } else if (useTemplate && projectType && templateById(projectType)) {
     const built = buildLinesFromTemplate(
       projectType,
       billing,
@@ -1077,7 +1098,7 @@ export async function createQuote(
       createdById: actorId(session),
       billing: resolvedBilling,
       packId: resolvedPackId || null,
-      projectType: projectType || "IA",
+      projectType: resolvedProjectType,
       notes: resolvedNotes,
       validUntil: defaultValidUntil(),
       lines: { create: lines },

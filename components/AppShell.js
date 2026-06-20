@@ -37,7 +37,6 @@ function AppShellInner({ children }) {
         <div className="app-topbar">
           <HamburgerButton open={drawerOpen} onClick={() => setDrawerOpen((v) => !v)} />
           <div className="app-topbar-actions">
-            <LanguageToggle compact className="language-toggle--topbar" />
             <HelpButton />
             <ThemeToggle compact className="theme-toggle--topbar" />
             {salesAccess && <NotificationBell />}

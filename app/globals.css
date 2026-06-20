@@ -2496,11 +2496,45 @@ body {
   color: var(--navy);
   background: var(--card-bg-muted);
 }
-.language-toggle--topbar { flex-shrink: 0; }
-.language-toggle--compact .language-toggle-btn {
-  min-width: 32px;
-  min-height: 32px;
-  padding: .3rem .45rem;
+.language-toggle--sidebar {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+.language-toggle--sidebar .language-toggle-btn {
+  flex: 1;
+  color: #e8eaef;
+}
+.language-toggle--sidebar .language-toggle-btn:hover:not(.language-toggle-btn--active) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.language-toggle--sidebar .language-toggle-btn--active {
+  background: var(--orange);
+  color: #fff;
+}
+.sidebar-locale {
+  width: 100%;
+  margin-bottom: .75rem;
+}
+.sidebar-locale-label {
+  display: block;
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #8b95a8;
+  margin-bottom: .4rem;
+}
+.quote-pack-heading {
+  margin: 1rem 0 .5rem;
+  font-size: .95rem;
+  color: var(--navy);
+}
+.quote-create-total {
+  margin: 1rem 0 0;
+  font-size: .95rem;
+  color: var(--navy);
 }
 .login-theme-toggle {
   position: fixed;

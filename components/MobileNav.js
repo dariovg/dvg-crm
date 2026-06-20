@@ -6,6 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import { getNavLinksForSession, getTabLinksForSession } from "@/lib/nav-links";
 import { canAccessSalesCrm } from "@/lib/permissions";
 import ThemeToggle from "@/components/ThemeToggle";
+import LanguageToggle from "@/components/LanguageToggle";
 import NavIcon from "@/components/NavIcon";
 import BrandLogo from "@/components/BrandLogo";
 import { useLocale } from "@/components/LocaleProvider";
@@ -74,6 +75,10 @@ export function MobileDrawer({ open, onClose }) {
           ))}
         </nav>
         <div className="mobile-drawer-foot">
+          <div className="sidebar-locale">
+            <span className="sidebar-locale-label">{t("locale.label")}</span>
+            <LanguageToggle className="language-toggle--sidebar" />
+          </div>
           <ThemeToggle className="theme-toggle--sidebar" />
           {isAdmin && (
             <a href="/api/export/leads" className="mobile-drawer-link export-link" onClick={handleLinkClick}>

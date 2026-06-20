@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { getNavLinksForSession } from "@/lib/nav-links";
 import ThemeToggle from "@/components/ThemeToggle";
+import LanguageToggle from "@/components/LanguageToggle";
 import NavIcon from "@/components/NavIcon";
 import BrandLogo from "@/components/BrandLogo";
 import { useLocale } from "@/components/LocaleProvider";
@@ -46,6 +47,10 @@ export default function Sidebar() {
         ))}
       </nav>
       <div className="sidebar-foot">
+        <div className="sidebar-locale">
+          <span className="sidebar-locale-label">{t("locale.label")}</span>
+          <LanguageToggle className="language-toggle--sidebar" />
+        </div>
         <ThemeToggle className="theme-toggle--sidebar" />
         {role !== "MARKETING" && (
           <p className="shortcuts-hint">

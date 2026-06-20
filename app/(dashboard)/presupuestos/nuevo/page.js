@@ -4,26 +4,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { createQuote } from "@/app/actions";
-import { PLANS, formatEuro } from "@/lib/pricing-catalog";
-import { catalogPriceForPack } from "@/lib/quotes";
-import { QUOTE_TEMPLATES } from "@/lib/quote-templates";
+import QuoteServicesPicker from "@/components/QuoteServicesPicker";
+import { formatEuro } from "@/lib/pricing-catalog";
+import { computeQuoteTotalWithVat } from "@/lib/quotes";
 
 function NuevoPresupuestoForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const contactId = searchParams.get("contactId");
-  const [projectType, setProjectType] = useState("IA");
-  const [packId, setPackId] = useState("pro");
+  const [lines, setLines] = useState([]);
   const [billing, setBilling] = useState("MONTHLY");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const tpl = QUOTE_TEMPLATES[projectType];
-
-  useEffect(() => {
-    if (tpl?.defaultPackId) setPackId(tpl.defaultPackId);
-    if (tpl?.defaultBilling) setBilling(tpl.defaultBilling);
-  }, [projectType, tpl?.defaultBilling, tpl?.defaultPackId]);
+  const totalWithVat = computeQuoteTotalWithVat({ discountPercent: null }, lines);
 
   useEffect(() => {
     if (!contactId) setError("Falta contactId — abre desde un lead");
@@ -32,15 +26,14 @@ function NuevoPresupuestoForm() {
   async function submit(e) {
     e.preventDefault();
     if (!contactId) return;
+    if (!lines.length) {
+      setError("Añade al menos un servicio (Web / App, plan IA, etc.)");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
-      const { quoteId } = await createQuote(contactId, {
-        packId: tpl?.defaultPackId ? tpl.defaultPackId : packId,
-        billing,
-        projectType,
-        useTemplate: true,
-      });
+      const { quoteId } = await createQuote(contactId, { lines, billing });
       router.push(`/presupuestos/${quoteId}`);
     } catch (err) {
       setError(err.message || "Error al crear");
@@ -62,53 +55,26 @@ function NuevoPresupuestoForm() {
   return (
     <form onSubmit={submit} className="quote-create-form">
       <section className="card">
-        <h2>Tipo de proyecto</h2>
-        <p className="page-lead">Elige una plantilla base. Podrás ajustar líneas después.</p>
-        <div className="quote-template-picker">
-          {Object.values(QUOTE_TEMPLATES).map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={`quote-template-btn${
-                projectType === t.id ? " quote-template-btn--active" : ""
-              }`}
-              onClick={() => setProjectType(t.id)}
-            >
-              <strong>{t.label}</strong>
-              <span>{t.description}</span>
-            </button>
-          ))}
-        </div>
+        <h2>Servicios del presupuesto</h2>
+        <p className="page-lead">
+          Añade todos los servicios que necesites. Puedes combinar web y agente IA en la misma factura.
+        </p>
+        <QuoteServicesPicker
+          lines={lines}
+          onChange={setLines}
+          billing={billing}
+          onBillingChange={setBilling}
+          disabled={busy}
+        />
+        {lines.length > 0 && (
+          <p className="quote-create-total">
+            Total estimado: <strong>{formatEuro(totalWithVat)}/mes (IVA incl.)</strong>
+          </p>
+        )}
       </section>
 
-      {projectType === "IA" && (
-        <section className="card">
-          <h3>Plan IA</h3>
-          <div className="quote-pack-picker">
-            {PLANS.map((plan) => (
-              <button
-                key={plan.id}
-                type="button"
-                className={`quote-pack-btn${packId === plan.id ? " quote-pack-btn--active" : ""}`}
-                onClick={() => setPackId(plan.id)}
-              >
-                <strong>{plan.name}</strong>
-                <span>{formatEuro(catalogPriceForPack(plan.id, billing))}/mes</span>
-              </button>
-            ))}
-          </div>
-          <div className="field">
-            <label>Facturación</label>
-            <select value={billing} onChange={(e) => setBilling(e.target.value)}>
-              <option value="MONTHLY">Mensual</option>
-              <option value="ANNUAL">Anual (−15%)</option>
-            </select>
-          </div>
-        </section>
-      )}
-
       {error && <p className="form-error">{error}</p>}
-      <button type="submit" className="btn-primary" disabled={busy}>
+      <button type="submit" className="btn-primary" disabled={busy || !lines.length}>
         {busy ? "Creando…" : "Crear presupuesto"}
       </button>
     </form>
