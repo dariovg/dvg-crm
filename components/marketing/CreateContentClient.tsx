@@ -4,8 +4,9 @@ import { useCallback, useState } from "react";
 import { SocialPlatform } from "@prisma/client";
 import { PublishForm } from "@/components/marketing/PublishForm";
 import PostPreview from "@/components/marketing/PostPreview";
+import SavedTemplates from "@/components/marketing/SavedTemplates";
 
-const TEMPLATES = [
+const QUICK_TEMPLATES = [
   {
     label: "Tip IA para PYMEs",
     content:
@@ -25,6 +26,7 @@ const TEMPLATES = [
 
 export default function CreateContentClient() {
   const [template, setTemplate] = useState<string | undefined>();
+  const [templateKey, setTemplateKey] = useState(0);
   const [preview, setPreview] = useState({
     platform: "TWITTER" as SocialPlatform,
     content: "",
@@ -38,6 +40,11 @@ export default function CreateContentClient() {
     []
   );
 
+  const applyTemplate = useCallback((content: string) => {
+    setTemplate(content);
+    setTemplateKey((k) => k + 1);
+  }, []);
+
   return (
     <>
       <section className="panel marketing-templates">
@@ -46,12 +53,12 @@ export default function CreateContentClient() {
           Empieza con una base y edítala para el post de hoy.
         </p>
         <div className="marketing-template-btns">
-          {TEMPLATES.map((t) => (
+          {QUICK_TEMPLATES.map((t) => (
             <button
               key={t.label}
               type="button"
               className="btn btn-secondary"
-              onClick={() => setTemplate(t.content)}
+              onClick={() => applyTemplate(t.content)}
             >
               {t.label}
             </button>
@@ -59,9 +66,14 @@ export default function CreateContentClient() {
         </div>
       </section>
 
+      <SavedTemplates
+        currentContent={preview.content}
+        onSelect={applyTemplate}
+      />
+
       <div className="marketing-create-grid">
         <PublishForm
-          key={template ?? "empty"}
+          key={`${templateKey}-${template ?? "empty"}`}
           initialContent={template}
           onPreviewChange={handlePreviewChange}
         />

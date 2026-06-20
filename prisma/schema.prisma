@@ -82,6 +82,7 @@ model User {
   socialPostsCreated   SocialPost[] @relation("SocialPostCreator")
   campaignsCreated     Campaign[]   @relation("CampaignCreator")
   postsApproved        PostApproval[] @relation("PostApproval")
+  marketingTemplates   MarketingTemplate[] @relation("MarketingTemplateCreator")
 }
 
 model AppSetting {
@@ -330,6 +331,18 @@ model PostApproval {
 
   @@index([postId])
   @@index([approvedById])
+  @@index([createdAt])
+}
+
+model MarketingTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  createdBy   User?    @relation("MarketingTemplateCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
   @@index([createdAt])
 }
 
