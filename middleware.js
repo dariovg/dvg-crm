@@ -1,7 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import {
-  isSalesPath,
   marketingModuleRedirect,
   marketingSalesRedirect,
 } from "@/lib/rbac-routes";
@@ -37,17 +36,6 @@ export default withAuth(
         return NextResponse.redirect(new URL("/dashboard", req.url));
       }
 
-      const totpEnabled = token?.totpEnabled === true;
-      const isSecurityPage =
-        pathname === "/admin/security" ||
-        pathname.startsWith("/admin/security/");
-
-      if (!totpEnabled && !isSecurityPage) {
-        const url = new URL("/admin/security", req.url);
-        url.searchParams.set("setup", "2fa");
-        return NextResponse.redirect(url);
-      }
-
       return NextResponse.next();
     }
 
@@ -63,12 +51,6 @@ export default withAuth(
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       return NextResponse.next();
-    }
-
-    if (role === "ADMIN" && !token?.totpEnabled && isSalesPath(pathname)) {
-      const url = new URL("/admin/security", req.url);
-      url.searchParams.set("setup", "2fa");
-      return NextResponse.redirect(url);
     }
 
     const salesDenied = marketingSalesRedirect(role, pathname);
