@@ -1122,6 +1122,31 @@ body {
   margin-bottom: .5rem;
 }
 .new-lead-card { margin-bottom: 1rem; }
+.contact-editor-section {
+  padding-top: 0.85rem;
+  margin-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+.contact-editor-section:first-of-type {
+  padding-top: 0;
+  margin-top: 0;
+  border-top: none;
+}
+.contact-editor-sub {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
+}
+.contact-edit-hint {
+  font-size: 0.85rem;
+  margin-top: 0.75rem;
+}
+.card-muted {
+  background: var(--card-bg-muted);
+}
 .form-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 .form-error { color: #b91c1c; font-size: .85rem; }
 .alert-warn {

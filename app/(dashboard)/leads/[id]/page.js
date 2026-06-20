@@ -77,20 +77,14 @@ export default async function LeadDetailPage({ params }) {
 
       <div className="detail-grid">
         <div>
-          <div className="card">
-            <h2>Datos de contacto</h2>
+          <div className="card card-muted">
+            <h2>Resumen</h2>
             <p>
-              <strong>Email:</strong> {contact.email}
+              <strong>Origen:</strong> {SOURCE_LABEL[contact.source]}
             </p>
             <p>
-              <strong>Empresa:</strong> {contact.company || "—"}
-            </p>
-            <p>
-              <strong>Teléfono:</strong> {contact.phone || "—"}
-            </p>
-            <p>
-              <strong>Valor:</strong>{" "}
-              {contact.dealValue ? `${contact.dealValue} €` : "—"}
+              <strong>Alta:</strong>{" "}
+              {contact.createdAt.toLocaleString("es-ES")}
             </p>
             {contact.tags?.length > 0 && (
               <p>
@@ -102,12 +96,8 @@ export default async function LeadDetailPage({ params }) {
                 ))}
               </p>
             )}
-            <p>
-              <strong>Interés:</strong> {contact.interest || "—"}
-            </p>
-            <p>
-              <strong>Alta:</strong>{" "}
-              {contact.createdAt.toLocaleString("es-ES")}
+            <p className="muted contact-edit-hint">
+              Edita nombre, email, teléfono y empresa en el panel derecho.
             </p>
           </div>
 

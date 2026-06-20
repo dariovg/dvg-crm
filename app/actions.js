@@ -229,6 +229,51 @@ export async function updateContactDetails(contactId, { dealValue, tags, notes }
   revalidatePath("/leads");
 }
 
+export async function updateContactProfile(contactId, data) {
+  const session = await requireAuthSession();
+  await getContactForUser(session, contactId);
+
+  const name = String(data.name || "").trim();
+  const email = String(data.email || "").trim().toLowerCase();
+  if (!name || !email) throw new Error("Nombre y email obligatorios");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("Email no válido");
+  }
+
+  const duplicate = await prisma.contact.findFirst({
+    where: { email, id: { not: contactId } },
+    select: { id: true, name: true },
+  });
+  if (duplicate) {
+    throw new Error(`Ya existe otro lead con ese email (${duplicate.name})`);
+  }
+
+  await prisma.contact.update({
+    where: { id: contactId },
+    data: {
+      name,
+      email,
+      phone: data.phone?.trim() || null,
+      company: data.company?.trim() || null,
+      interest: data.interest?.trim() || null,
+    },
+  });
+
+  await prisma.contactEvent.create({
+    data: {
+      contactId,
+      type: "profile_updated",
+      summary: "Datos de contacto actualizados",
+      userId: actorId(session),
+    },
+  });
+
+  revalidatePath(`/leads/${contactId}`);
+  revalidatePath("/leads");
+  revalidatePath("/pipeline");
+  return { ok: true };
+}
+
 export async function assignContact(contactId, assigneeId) {
   const session = await requireStaffSession();
   const assignee = assigneeId

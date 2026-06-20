@@ -7,6 +7,7 @@ import {
   updateContactStatus,
   assignContact,
   updateContactDetails,
+  updateContactProfile,
 } from "@/app/actions";
 import { CONTACT_STATUSES, LOST_REASONS } from "@/lib/constants";
 
@@ -16,6 +17,11 @@ export default function ContactEditor({
   canAssign = false,
 }) {
   const router = useRouter();
+  const [name, setName] = useState(contact.name || "");
+  const [email, setEmail] = useState(contact.email || "");
+  const [phone, setPhone] = useState(contact.phone || "");
+  const [company, setCompany] = useState(contact.company || "");
+  const [interest, setInterest] = useState(contact.interest || "");
   const [notes, setNotes] = useState(contact.notes || "");
   const [status, setStatus] = useState(contact.status);
   const [lostReason, setLostReason] = useState(contact.lostReason || "");
@@ -24,6 +30,25 @@ export default function ContactEditor({
   const [tags, setTags] = useState((contact.tags || []).join(", "));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  async function saveProfile(e) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      await updateContactProfile(contact.id, {
+        name,
+        email,
+        phone,
+        company,
+        interest,
+      });
+      router.refresh();
+    } catch (err) {
+      setError(err.message);
+    }
+    setSaving(false);
+  }
 
   async function saveNotes(e) {
     e.preventDefault();
@@ -91,67 +116,105 @@ export default function ContactEditor({
   }
 
   return (
-    <div className="card">
-      <h2>Editar</h2>
-      <div className="field">
-        <label>Estado</label>
-        <select value={status} onChange={onStatusChange} disabled={saving}>
-          {CONTACT_STATUSES.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+    <div className="card contact-editor">
+      <h2>Editar lead</h2>
+
+      <form onSubmit={saveProfile} className="contact-editor-section">
+        <h3 className="contact-editor-sub">Datos de contacto</h3>
+        <div className="field">
+          <label>Nombre *</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} required />
+        </div>
+        <div className="field">
+          <label>Email *</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+        <div className="field">
+          <label>Teléfono</label>
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Empresa</label>
+          <input value={company} onChange={(e) => setCompany(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Interés</label>
+          <input value={interest} onChange={(e) => setInterest(e.target.value)} />
+        </div>
+        <button type="submit" className="btn-primary" disabled={saving}>
+          Guardar datos
+        </button>
+      </form>
+
+      <div className="contact-editor-section">
+        <h3 className="contact-editor-sub">Pipeline</h3>
+        <div className="field">
+          <label>Estado</label>
+          <select value={status} onChange={onStatusChange} disabled={saving}>
+            {CONTACT_STATUSES.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        {status === "LOST" && contact.status !== "LOST" && (
+          <div className="field">
+            <label>Motivo de pérdida *</label>
+            <select
+              value={lostReason}
+              onChange={(e) => setLostReason(e.target.value)}
+            >
+              <option value="">Seleccionar…</option>
+              {LOST_REASONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn-primary"
+              style={{ marginTop: ".5rem" }}
+              onClick={confirmLost}
+              disabled={saving}
+            >
+              Confirmar perdido
+            </button>
+          </div>
+        )}
+        {contact.lostReason && (
+          <p className="lost-reason-label">
+            Motivo: <strong>{contact.lostReason}</strong>
+          </p>
+        )}
+        {canAssign && (
+          <div className="field">
+            <label>Asignado a</label>
+            <select
+              value={assigneeId}
+              onChange={onAssignChange}
+              disabled={saving}
+              className="assign-select"
+            >
+              <option value="">Sin asignar</option>
+              {team.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name || u.email}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
-      {status === "LOST" && contact.status !== "LOST" && (
-        <div className="field">
-          <label>Motivo de pérdida *</label>
-          <select
-            value={lostReason}
-            onChange={(e) => setLostReason(e.target.value)}
-          >
-            <option value="">Seleccionar…</option>
-            {LOST_REASONS.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="btn-primary"
-            style={{ marginTop: ".5rem" }}
-            onClick={confirmLost}
-            disabled={saving}
-          >
-            Confirmar perdido
-          </button>
-        </div>
-      )}
-      {contact.lostReason && (
-        <p className="lost-reason-label">
-          Motivo: <strong>{contact.lostReason}</strong>
-        </p>
-      )}
-      {canAssign && (
-        <div className="field">
-          <label>Asignado a</label>
-          <select
-            value={assigneeId}
-            onChange={onAssignChange}
-            disabled={saving}
-            className="assign-select"
-          >
-            <option value="">Sin asignar</option>
-            {team.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name || u.email}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-      <form onSubmit={saveDetails}>
+
+      <form onSubmit={saveDetails} className="contact-editor-section">
+        <h3 className="contact-editor-sub">Comercial</h3>
         <div className="field">
           <label>Valor estimado (€)</label>
           <input
@@ -173,13 +236,15 @@ export default function ContactEditor({
           Guardar valor y etiquetas
         </button>
       </form>
-      <form onSubmit={saveNotes}>
+
+      <form onSubmit={saveNotes} className="contact-editor-section">
+        <h3 className="contact-editor-sub">Notas</h3>
         <div className="field">
           <label>Notas internas</label>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
         {error && <p className="form-error">{error}</p>}
-        <button type="submit" className="btn-primary" disabled={saving}>
+        <button type="submit" className="btn-sm" disabled={saving}>
           Guardar notas
         </button>
       </form>
