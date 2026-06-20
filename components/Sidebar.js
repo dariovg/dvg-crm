@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { getNavLinksForSession } from "@/lib/nav-links";
@@ -13,6 +14,7 @@ export default function Sidebar() {
   const isAdmin = role === "ADMIN";
   const isManager = role === "MANAGER";
   const navLinks = getNavLinksForSession(session);
+  const isMarketingOnly = role === "MARKETING";
 
   function isActive(href) {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -22,10 +24,24 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <span className="brand-ia">DVG</span> CRM
-        <p className="sidebar-tag">hacIA lo imparable</p>
+        <Image
+          src="/logo-dvg-studio.svg"
+          alt="DVG Studio"
+          width={36}
+          height={36}
+          className="sidebar-logo"
+        />
+        <div className="sidebar-brand-text">
+          <div className="sidebar-brand-title">
+            <span className="brand-ia">DVG</span> CRM
+          </div>
+          <p className="sidebar-tag">hacIA lo imparable</p>
+        </div>
       </div>
-      <nav className="sidebar-nav">
+      <nav className="sidebar-nav" aria-label="Principal">
+        {!isMarketingOnly && (
+          <span className="sidebar-nav-label">Comercial</span>
+        )}
         {navLinks.map((l) => (
           <Link
             key={l.href}

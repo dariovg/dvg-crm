@@ -67,7 +67,7 @@ export default async function MarketingDashboard() {
         </div>
       )}
 
-      <div className="marketing-kpi-grid">
+      <div className={`marketing-kpi-grid${showLeadLinks ? "" : " marketing-kpi-grid--3"}`}>
         <div className="marketing-kpi marketing-kpi--blue">
           <div className="marketing-kpi-value">
             {stats.impressions24h.toLocaleString("es-ES")}
@@ -80,12 +80,12 @@ export default async function MarketingDashboard() {
           </div>
           <div className="marketing-kpi-label">Likes (7 días)</div>
         </div>
-        <div className="marketing-kpi marketing-kpi--purple">
-          <div className="marketing-kpi-value">
-            {showLeadLinks ? newLeads24h : "—"}
+        {showLeadLinks && (
+          <div className="marketing-kpi marketing-kpi--purple">
+            <div className="marketing-kpi-value">{newLeads24h}</div>
+            <div className="marketing-kpi-label">Leads nuevos (24h)</div>
           </div>
-          <div className="marketing-kpi-label">Leads nuevos (24h)</div>
-        </div>
+        )}
         <div className="marketing-kpi marketing-kpi--orange">
           <div className="marketing-kpi-value">{stats.approvedCount}</div>
           <div className="marketing-kpi-label">Listos para publicar</div>

@@ -3,15 +3,33 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const ITEMS = [
-  { href: "/marketing", label: "Resumen", exact: true },
-  { href: "/marketing/create", label: "Crear" },
-  { href: "/marketing/pending", label: "Pendientes" },
-  { href: "/marketing/semana", label: "Vista domingo" },
-  { href: "/marketing/conexiones", label: "Conexiones" },
-  { href: "/marketing/approved", label: "Publicar" },
-  { href: "/marketing/published", label: "Historial" },
-  { href: "/marketing/analytics", label: "Analítica" },
+const GROUPS = [
+  {
+    label: "Inicio",
+    items: [{ href: "/marketing", label: "Resumen", exact: true }],
+  },
+  {
+    label: "Contenido",
+    items: [
+      { href: "/marketing/create", label: "Crear" },
+      { href: "/marketing/semana", label: "Semana" },
+    ],
+  },
+  {
+    label: "Flujo",
+    items: [
+      { href: "/marketing/pending", label: "Pendientes" },
+      { href: "/marketing/approved", label: "Publicar" },
+      { href: "/marketing/published", label: "Historial" },
+    ],
+  },
+  {
+    label: "Datos",
+    items: [
+      { href: "/marketing/analytics", label: "Analítica" },
+      { href: "/marketing/conexiones", label: "Conexiones" },
+    ],
+  },
 ];
 
 export default function MarketingSubnav() {
@@ -24,16 +42,21 @@ export default function MarketingSubnav() {
 
   return (
     <nav className="marketing-subnav" aria-label="Marketing">
-      {ITEMS.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          className={`marketing-subnav-link${
-            isActive(item.href, item.exact) ? " marketing-subnav-link--active" : ""
-          }`}
-        >
-          {item.label}
-        </Link>
+      {GROUPS.map((group) => (
+        <div key={group.label} className="marketing-subnav-group">
+          <span className="marketing-subnav-label">{group.label}</span>
+          {group.items.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`marketing-subnav-link${
+                isActive(item.href, item.exact) ? " marketing-subnav-link--active" : ""
+              }`}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
       ))}
     </nav>
   );
