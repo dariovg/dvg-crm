@@ -21,6 +21,14 @@ interface Post {
   publishedAt: string | null;
 }
 
+const PLATFORM_LABELS: Record<string, string> = {
+  all: "Todas",
+  TWITTER: "X",
+  TIKTOK: "TikTok",
+  LINKEDIN: "LinkedIn",
+  INSTAGRAM: "Instagram",
+};
+
 export default function PublishedPostsPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +59,13 @@ export default function PublishedPostsPage() {
 
   const platforms = ["all", ...new Set(posts.map((p) => p.platform))];
 
+  const totalLikes = filteredPosts.reduce((acc, p) => acc + p.likes, 0);
+  const totalImpressions = filteredPosts.reduce((acc, p) => acc + p.impressions, 0);
+  const engagement =
+    totalImpressions > 0
+      ? ((totalLikes / totalImpressions) * 100).toFixed(1)
+      : "0";
+
   if (loading) {
     return <MarketingPublishedSkeleton />;
   }
@@ -64,19 +79,15 @@ export default function PublishedPostsPage() {
         </div>
       </header>
 
-      {/* Platform filter */}
-      <div className="mb-6 flex gap-2 flex-wrap">
+      <div className="filter-chips">
         {platforms.map((platform) => (
           <button
             key={platform}
+            type="button"
             onClick={() => setFilter(platform)}
-            className={`px-4 py-2 rounded font-semibold transition-colors ${
-              filter === platform
-                ? "bg-blue-500 text-white"
-                : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-            }`}
+            className={`filter-chip${filter === platform ? " filter-chip--active" : ""}`}
           >
-            {platform === "all" ? "All Platforms" : platform}
+            {PLATFORM_LABELS[platform] || platform}
           </button>
         ))}
       </div>
@@ -91,54 +102,39 @@ export default function PublishedPostsPage() {
           actionHref="/marketing/create"
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="marketing-post-grid">
           {filteredPosts.map((post) => (
             <SocialPostCard key={post.id} post={post} showMetrics />
           ))}
         </div>
       )}
 
-      {/* Summary stats */}
       {filteredPosts.length > 0 && (
-        <div className="mt-8 pt-6 border-t">
-          <h3 className="font-semibold mb-4">📊 Summary</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-blue-50 p-3 rounded">
-              <p className="text-xl font-bold">{filteredPosts.length}</p>
-              <p className="text-sm text-gray-600">Posts</p>
+        <section className="marketing-summary">
+          <h2 className="panel-title">Resumen</h2>
+          <div className="marketing-kpi-grid marketing-kpi-grid--4">
+            <div className="marketing-kpi marketing-kpi--orange">
+              <div className="marketing-kpi-value">{filteredPosts.length}</div>
+              <div className="marketing-kpi-label">Posts</div>
             </div>
-            <div className="bg-green-50 p-3 rounded">
-              <p className="text-xl font-bold">
-                {filteredPosts
-                  .reduce((acc, p) => acc + p.likes, 0)
-                  .toLocaleString()}
-              </p>
-              <p className="text-sm text-gray-600">Likes</p>
+            <div className="marketing-kpi marketing-kpi--green">
+              <div className="marketing-kpi-value">
+                {totalLikes.toLocaleString("es-ES")}
+              </div>
+              <div className="marketing-kpi-label">Likes</div>
             </div>
-            <div className="bg-purple-50 p-3 rounded">
-              <p className="text-xl font-bold">
-                {filteredPosts
-                  .reduce((acc, p) => acc + p.impressions, 0)
-                  .toLocaleString()}
-              </p>
-              <p className="text-sm text-gray-600">Impressions</p>
+            <div className="marketing-kpi marketing-kpi--blue">
+              <div className="marketing-kpi-value">
+                {totalImpressions.toLocaleString("es-ES")}
+              </div>
+              <div className="marketing-kpi-label">Impresiones</div>
             </div>
-            <div className="bg-orange-50 p-3 rounded">
-              <p className="text-xl font-bold">
-                {(
-                  (filteredPosts.reduce((acc, p) => acc + p.likes, 0) /
-                    Math.max(
-                      filteredPosts.reduce((acc, p) => acc + p.impressions, 0),
-                      1
-                    )) *
-                  100
-                ).toFixed(2)}
-                %
-              </p>
-              <p className="text-sm text-gray-600">Engagement</p>
+            <div className="marketing-kpi marketing-kpi--purple">
+              <div className="marketing-kpi-value">{engagement}%</div>
+              <div className="marketing-kpi-label">Engagement</div>
             </div>
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

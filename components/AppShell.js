@@ -8,6 +8,7 @@ import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 import NotificationBell from "@/components/NotificationBell";
 import { HamburgerButton, MobileDrawer, BottomTabBar } from "@/components/MobileNav";
 import ThemeToggle from "@/components/ThemeToggle";
+import PageTransition from "@/components/PageTransition";
 import { canAccessSalesCrm } from "@/lib/permissions";
 
 function AppShellInner({ children }) {
@@ -36,7 +37,7 @@ function AppShellInner({ children }) {
             {salesAccess && <GlobalSearch />}
           </div>
         </div>
-        {children}
+        <PageTransition>{children}</PageTransition>
       </main>
       <BottomTabBar onMoreClick={openDrawer} />
       {salesAccess && <KeyboardShortcuts />}
