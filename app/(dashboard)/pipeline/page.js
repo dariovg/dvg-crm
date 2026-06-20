@@ -30,23 +30,12 @@ export default async function PipelinePage() {
         Arrastra tarjetas entre columnas o pulsa para ver detalle.
         {isStaff(session) ? "" : " Solo tus leads asignados."}
       </p>
-      <div className="pipeline-scroll">
       <PipelineBoard
         columns={columns}
+        lostContacts={lost}
         allStatuses={CONTACT_STATUSES}
-        isAdmin={isStaff(session)}
+        isStaff={isStaff(session)}
       />
-      </div>
-      {lost.length > 0 && (
-        <div className="card pipeline-lost">
-          <h2>Perdidos ({lost.length})</h2>
-          <PipelineBoard
-            columns={[{ id: "LOST", label: "Perdido", contacts: lost }]}
-            allStatuses={CONTACT_STATUSES}
-            isAdmin={isStaff(session)}
-          />
-        </div>
-      )}
     </>
   );
 }
