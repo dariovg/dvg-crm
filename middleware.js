@@ -1,20 +1,10 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-
-const SALES_PREFIXES = [
-  "/dashboard",
-  "/leads",
-  "/pipeline",
-  "/calendar",
-  "/tasks",
-  "/presupuestos",
-];
-
-function isSalesPath(pathname) {
-  return SALES_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`)
-  );
-}
+import {
+  isSalesPath,
+  marketingModuleRedirect,
+  marketingSalesRedirect,
+} from "@/lib/rbac-routes";
 
 export default withAuth(
   function middleware(req) {
@@ -33,10 +23,12 @@ export default withAuth(
       return NextResponse.redirect(new URL("/login?reason=env_admin", req.url));
     }
 
+    const marketingDenied = marketingModuleRedirect(role, pathname);
+    if (marketingDenied) {
+      return NextResponse.redirect(new URL(marketingDenied, req.url));
+    }
+
     if (pathname.startsWith("/marketing")) {
-      if (role !== "ADMIN" && role !== "MARKETING") {
-        return NextResponse.redirect(new URL("/dashboard", req.url));
-      }
       return NextResponse.next();
     }
 
@@ -79,8 +71,9 @@ export default withAuth(
       return NextResponse.redirect(url);
     }
 
-    if (role === "MARKETING" && isSalesPath(pathname)) {
-      return NextResponse.redirect(new URL("/marketing", req.url));
+    const salesDenied = marketingSalesRedirect(role, pathname);
+    if (salesDenied) {
+      return NextResponse.redirect(new URL(salesDenied, req.url));
     }
 
     return NextResponse.next();

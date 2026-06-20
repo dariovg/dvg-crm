@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+import { withSentryConfig } from "@sentry/nextjs";
+
 const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
@@ -25,4 +27,11 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default process.env.SENTRY_DSN
+  ? withSentryConfig(nextConfig, {
+      silent: true,
+      disableLogger: true,
+      widenClientFileUpload: true,
+      hideSourceMaps: true,
+    })
+  : nextConfig;
