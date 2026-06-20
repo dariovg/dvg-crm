@@ -21,7 +21,7 @@ export default async function QuotePdfPage({ params }) {
 
   return (
     <>
-      <QuotePdfActions quoteId={quote.id} />
+      <QuotePdfActions quoteId={quote.id} quote={quote} />
       <QuotePdfView quote={quote} />
     </>
   );
