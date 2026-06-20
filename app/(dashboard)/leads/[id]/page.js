@@ -8,6 +8,7 @@ import ContactEditor from "@/components/ContactEditor";
 import ContactQuotes from "@/components/ContactQuotes";
 import TaskForm from "@/components/TaskForm";
 import TaskList from "@/components/TaskList";
+import LeadTimeline from "@/components/LeadTimeline";
 import { SOURCE_LABEL } from "@/lib/constants";
 import { getAuthSession, listTeamUsers } from "@/lib/auth-server";
 import { canAccessContact, canAssignContacts, isAdmin, isStaff } from "@/lib/permissions";
@@ -22,6 +23,7 @@ export default async function LeadDetailPage({ params }) {
     where: { id },
     include: {
       assignee: { select: { id: true, email: true, name: true, role: true } },
+      createdBy: { select: { id: true, name: true, email: true } },
       events: { orderBy: { createdAt: "desc" }, include: { user: true } },
       meetings: { orderBy: { createdAt: "desc" } },
       tasks: {
@@ -30,7 +32,7 @@ export default async function LeadDetailPage({ params }) {
           assignee: { select: { id: true, email: true, name: true, role: true } },
         },
       },
-      surveys: { orderBy: { createdAt: "desc" }, take: 3 },
+      surveys: { orderBy: { createdAt: "desc" } },
       quotes: {
         orderBy: { createdAt: "desc" },
         include: {
@@ -102,27 +104,6 @@ export default async function LeadDetailPage({ params }) {
             </p>
           </div>
 
-          {contact.meetings.length > 0 && (
-            <div className="card">
-              <h2>Citas</h2>
-              <ul className="timeline">
-                {contact.meetings.map((m) => (
-                  <li key={m.id}>
-                    <time>
-                      {m.date} · {m.time}
-                    </time>
-                    {m.meetUrl && (
-                      <a href={m.meetUrl} target="_blank" rel="noreferrer">
-                        Google Meet
-                      </a>
-                    )}
-                    {m.notes && <div>{m.notes}</div>}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
           <ContactQuotes
             contactId={contact.id}
             quotes={contact.quotes}
@@ -130,18 +111,8 @@ export default async function LeadDetailPage({ params }) {
           />
 
           <div className="card">
-            <h2>Historial</h2>
-            <ul className="timeline">
-              {contact.events.map((ev) => (
-                <li key={ev.id}>
-                  <time>{ev.createdAt.toLocaleString("es-ES")}</time>
-                  {ev.summary}
-                  {ev.user?.name && (
-                    <div className="timeline-user">por {ev.user.name}</div>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <h2>Línea de tiempo</h2>
+            <LeadTimeline contact={contact} />
           </div>
         </div>
 
