@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import SocialPostCard from "@/components/marketing/SocialPostCard";
 import PublishButton from "@/components/marketing/PublishButton";
+import EmptyState from "@/components/EmptyState";
 
 interface Post {
   id: string;
@@ -90,11 +91,14 @@ export default function ApprovedPostsPage() {
           Publicar ahora ({ready.length})
         </h2>
         {ready.length === 0 ? (
-          <p className="muted">
-            No hay posts aprobados.{" "}
-            <Link href="/marketing/pending">Revisa pendientes</Link> o{" "}
-            <Link href="/marketing/create">crea contenido</Link>.
-          </p>
+          <EmptyState
+            className="empty-state-card--wide"
+            icon="marketing"
+            title="Nada listo para publicar"
+            description="Aprueba posts pendientes o crea contenido nuevo."
+            actionLabel="Ver pendientes"
+            actionHref="/marketing/pending"
+          />
         ) : (
           <div className="marketing-post-list">
             {ready.map((post) => (

@@ -7,6 +7,7 @@ import { getNavLinksForSession, getTabLinksForSession } from "@/lib/nav-links";
 import { canAccessSalesCrm } from "@/lib/permissions";
 import ThemeToggle from "@/components/ThemeToggle";
 import NavIcon from "@/components/NavIcon";
+import BrandLogo from "@/components/BrandLogo";
 
 export function HamburgerButton({ open, onClick }) {
   return (
@@ -51,10 +52,7 @@ export function MobileDrawer({ open, onClose }) {
         aria-hidden={!open}
       >
         <div className="mobile-drawer-head">
-          <div className="sidebar-brand">
-            <span className="brand-ia">DVG</span> CRM
-            <p className="sidebar-tag">hacIA lo imparable</p>
-          </div>
+          <BrandLogo className="brand-logo--drawer" />
           <button type="button" className="mobile-drawer-close" onClick={onClose} aria-label="Cerrar">
             <NavIcon name="close" />
           </button>

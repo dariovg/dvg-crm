@@ -67,28 +67,10 @@ body {
 }
 
 .sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
   margin-bottom: 1.75rem;
   padding: 0 0.35rem;
 }
-.sidebar-logo {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-  filter: drop-shadow(0 1px 6px rgba(255, 107, 53, 0.25));
-}
-.sidebar-brand-text { line-height: 1.2; }
-.sidebar-brand-title .brand-ia { color: var(--orange); }
 .brand-ia { color: var(--orange); }
-.sidebar-tag {
-  font-size: 0.68rem;
-  color: var(--gold);
-  margin: 0.15rem 0 0;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
 .sidebar-nav-label {
   font-size: 0.62rem;
   font-weight: 800;
@@ -592,6 +574,67 @@ body {
 .btn-ghost { background: #eef0f4; color: var(--navy); }
 .btn-danger { background: #fee2e2; color: #b91c1c; }
 .empty-state { padding: 1.5rem; text-align: center; color: var(--gray); font-size: .9rem; }
+
+.brand-logo {
+  display: block;
+  text-decoration: none;
+}
+.brand-logo-img {
+  width: 100%;
+  max-width: 196px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 1px 8px rgba(255, 107, 53, 0.15));
+}
+.brand-logo-badge {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(247, 147, 30, 0.12);
+  border: 1px solid rgba(247, 147, 30, 0.25);
+}
+.brand-logo--drawer .brand-logo-img { max-width: 168px; }
+
+.empty-state-card {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  background: var(--card-bg);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.empty-state-card--wide { width: 100%; }
+.empty-state-icon-wrap {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 107, 53, 0.08);
+  color: var(--orange);
+  border: 1px solid rgba(255, 107, 53, 0.2);
+}
+.empty-state-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-heading);
+  margin: 0 0 0.4rem;
+}
+.empty-state-desc {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0 0 1.25rem;
+  line-height: 1.5;
+}
+.empty-state-action { display: inline-flex; }
 
 /* Filtros leads */
 .filters-bar {

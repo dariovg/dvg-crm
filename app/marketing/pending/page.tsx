@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import SocialPostCard from "@/components/marketing/SocialPostCard";
 import ApprovalButtons from "@/components/marketing/ApprovalButtons";
+import EmptyState from "@/components/EmptyState";
 
 interface SocialPost {
   id: string;
@@ -116,13 +117,14 @@ export default function PendingPostsPage() {
       {error && <div className="alert alert-error">{error}</div>}
 
       {posts.length === 0 ? (
-        <div className="panel panel--empty">
-          <h2>Sin posts pendientes</h2>
-          <p className="muted">Todo revisado. Crea nuevo contenido cuando quieras.</p>
-          <Link href="/marketing/create" className="btn btn-primary">
-            Crear contenido
-          </Link>
-        </div>
+        <EmptyState
+          className="empty-state-card--wide"
+          icon="marketing"
+          title="Sin posts pendientes"
+          description="Todo revisado. Crea nuevo contenido cuando quieras."
+          actionLabel="Crear contenido"
+          actionHref="/marketing/create"
+        />
       ) : (
         <div className="marketing-post-list">
           {posts.map((post) => (

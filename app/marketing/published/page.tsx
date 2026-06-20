@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import SocialPostCard from "@/components/marketing/SocialPostCard";
+import EmptyState from "@/components/EmptyState";
 
 interface Post {
   id: string;
@@ -78,10 +79,14 @@ export default function PublishedPostsPage() {
       {loading ? (
         <div className="text-center py-12 text-gray-500">Loading posts...</div>
       ) : filteredPosts.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-500 text-lg">No published posts yet</p>
-          <p className="text-gray-400">Start creating and approving content</p>
-        </div>
+        <EmptyState
+          className="empty-state-card--wide"
+          icon="marketing"
+          title="Sin publicaciones"
+          description="Los posts publicados en X y TikTok aparecerán aquí."
+          actionLabel="Crear contenido"
+          actionHref="/marketing/create"
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredPosts.map((post) => (

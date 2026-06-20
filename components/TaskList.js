@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toggleTask, updateTask, deleteTask } from "@/app/actions";
 import AssigneeBadge from "@/components/AssigneeBadge";
+import EmptyState from "@/components/EmptyState";
 import { TASK_PRIORITIES } from "@/lib/constants";
 import { taskDueStatus, dueLabel } from "@/lib/crm-utils";
 
@@ -184,7 +185,15 @@ export default function TaskList({
         </div>
       ))}
       {!tasks.length && (
-        <p className="empty-state">Sin tareas {isAdmin ? "" : "asignadas a ti"}.</p>
+        <EmptyState
+          icon="tasks"
+          title="Sin tareas"
+          description={
+            isAdmin
+              ? "Crea una tarea para organizar el seguimiento comercial."
+              : "No tienes tareas asignadas por ahora."
+          }
+        />
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import StatusBadge from "@/components/StatusBadge";
+import EmptyState from "@/components/EmptyState";
 import TaskRemindersBanner from "@/components/TaskRemindersBanner";
 
 export default function DashboardView({
@@ -193,7 +194,15 @@ export default function DashboardView({
             </li>
           ))}
         </ul>
-        {!recent.length && <p className="empty-state">Aún no hay leads.</p>}
+        {!recent.length && (
+          <EmptyState
+            icon="leads"
+            title="Sin actividad reciente"
+            description="Los leads nuevos aparecerán aquí."
+            actionLabel="Ver leads"
+            actionHref="/leads"
+          />
+        )}
       </div>
     </>
   );

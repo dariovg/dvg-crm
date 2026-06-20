@@ -7,6 +7,7 @@ import { assignContact, bulkAssignContacts } from "@/app/actions";
 import StatusBadge from "@/components/StatusBadge";
 import AssigneeBadge from "@/components/AssigneeBadge";
 import LeadScoreBadge from "@/components/LeadScoreBadge";
+import EmptyState from "@/components/EmptyState";
 import { SOURCE_LABEL, CONTACT_STATUSES } from "@/lib/constants";
 
 const STORAGE_KEY = "dvg-crm-saved-filters";
@@ -253,7 +254,12 @@ export function LeadsTable({ contacts, team, canAssign }) {
           </article>
         ))}
         {!contacts.length && (
-          <p className="empty-state">No hay leads con estos filtros.</p>
+          <EmptyState
+            className="empty-state-card--wide"
+            icon="leads"
+            title="No hay leads"
+            description="No hay resultados con estos filtros. Prueba a ampliar la búsqueda."
+          />
         )}
       </div>
       <div className="table-wrap table-wrap--desktop">
@@ -327,7 +333,12 @@ export function LeadsTable({ contacts, team, canAssign }) {
           </tbody>
         </table>
         {!contacts.length && (
-          <p className="empty-state">No hay leads con estos filtros.</p>
+          <EmptyState
+            className="empty-state-card--wide"
+            icon="leads"
+            title="No hay leads"
+            description="No hay resultados con estos filtros. Prueba a ampliar la búsqueda."
+          />
         )}
       </div>
     </>

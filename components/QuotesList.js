@@ -1,11 +1,21 @@
 import Link from "next/link";
 import QuoteStatusBadge from "@/components/QuoteStatusBadge";
+import EmptyState from "@/components/EmptyState";
 import { computeQuoteTotal } from "@/lib/quotes";
 import { formatEuro } from "@/lib/pricing-catalog";
 
 export default function QuotesList({ quotes, showContact = true, isAdmin = false }) {
   if (!quotes.length) {
-    return <p className="empty-hint">No hay presupuestos todavía.</p>;
+    return (
+      <EmptyState
+        className="empty-state-card--wide"
+        icon="presupuestos"
+        title="Sin presupuestos"
+        description="Crea el primer presupuesto para un lead del pipeline."
+        actionLabel="Nuevo presupuesto"
+        actionHref="/presupuestos/nuevo"
+      />
+    );
   }
 
   return (

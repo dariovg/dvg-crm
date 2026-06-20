@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { getNavLinksForSession } from "@/lib/nav-links";
 import ThemeToggle from "@/components/ThemeToggle";
 import NavIcon from "@/components/NavIcon";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function Sidebar() {
   const { data: session } = useSession();
@@ -25,19 +25,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <Image
-          src="/logo-dvg-studio.svg"
-          alt="DVG Studio"
-          width={36}
-          height={36}
-          className="sidebar-logo"
-        />
-        <div className="sidebar-brand-text">
-          <div className="sidebar-brand-title">
-            <span className="brand-ia">DVG</span> CRM
-          </div>
-          <p className="sidebar-tag">hacIA lo imparable</p>
-        </div>
+        <BrandLogo />
       </div>
       <nav className="sidebar-nav" aria-label="Principal">
         {!isMarketingOnly && (
