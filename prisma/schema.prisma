@@ -57,6 +57,12 @@ enum QuoteLineType {
   CUSTOM
 }
 
+enum QuoteProjectType {
+  WEB
+  IA
+  CONSULTING
+}
+
 model User {
   id                   String    @id @default(cuid())
   email                String    @unique
@@ -229,6 +235,14 @@ model Quote {
   approvedBy      User?        @relation("QuoteApprover", fields: [approvedById], references: [id], onDelete: SetNull)
   approvedAt      DateTime?
   sentAt          DateTime?
+  projectType     QuoteProjectType @default(IA)
+  shareToken      String?          @unique
+  pdfFirstOpenedAt DateTime?
+  pdfLastOpenedAt  DateTime?
+  pdfOpenCount     Int              @default(0)
+  clientSignature  String?          @db.Text
+  signedAt         DateTime?
+  signedByName     String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   lines           QuoteLine[]
@@ -237,6 +251,7 @@ model Quote {
   @@index([status])
   @@index([createdById])
   @@index([createdAt])
+  @@index([shareToken])
 }
 
 model QuoteLine {
