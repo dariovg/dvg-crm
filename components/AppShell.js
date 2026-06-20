@@ -11,6 +11,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import PageTransition from "@/components/PageTransition";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
 import HelpButton from "@/components/HelpButton";
+import UserMenu from "@/components/UserMenu";
 import { canAccessSalesCrm } from "@/lib/permissions";
 
 function AppShellInner({ children }) {
@@ -38,6 +39,7 @@ function AppShellInner({ children }) {
             <ThemeToggle compact className="theme-toggle--topbar" />
             {salesAccess && <NotificationBell />}
             {salesAccess && <GlobalSearch />}
+            <UserMenu />
           </div>
         </div>
         <OnboardingChecklist />

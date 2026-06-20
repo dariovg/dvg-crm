@@ -93,12 +93,13 @@ export function MobileDrawer({ open, onClose }) {
               </span>
               <button
                 type="button"
+                className="sidebar-signout-btn"
                 onClick={() => {
                   onClose();
                   signOut({ callbackUrl: "/login" });
                 }}
               >
-                Salir
+                Cerrar sesión
               </button>
             </div>
           )}
