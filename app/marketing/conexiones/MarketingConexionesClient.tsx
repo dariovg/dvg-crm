@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { canConnectMarketingAccounts } from "@/lib/permissions";
+import { ConexionesSkeleton } from "@/components/Skeleton";
 
 interface ConnectionStatus {
   tiktok: {
@@ -34,11 +35,7 @@ export default function MarketingConexionesPage() {
   }, [tiktokResult]);
 
   if (loading) {
-    return (
-      <div className="page-pad">
-        <p className="muted">Cargando…</p>
-      </div>
-    );
+    return <ConexionesSkeleton />;
   }
 
   const tt = status?.tiktok;

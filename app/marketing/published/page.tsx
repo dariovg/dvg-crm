@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import SocialPostCard from "@/components/marketing/SocialPostCard";
 import EmptyState from "@/components/EmptyState";
+import { MarketingPublishedSkeleton } from "@/components/Skeleton";
 
 interface Post {
   id: string;
@@ -50,6 +51,10 @@ export default function PublishedPostsPage() {
 
   const platforms = ["all", ...new Set(posts.map((p) => p.platform))];
 
+  if (loading) {
+    return <MarketingPublishedSkeleton />;
+  }
+
   return (
     <div className="page-pad">
       <header className="page-head">
@@ -76,9 +81,7 @@ export default function PublishedPostsPage() {
         ))}
       </div>
 
-      {loading ? (
-        <div className="text-center py-12 text-gray-500">Loading posts...</div>
-      ) : filteredPosts.length === 0 ? (
+      {filteredPosts.length === 0 ? (
         <EmptyState
           className="empty-state-card--wide"
           icon="marketing"

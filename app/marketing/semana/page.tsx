@@ -6,6 +6,7 @@ import Link from "next/link";
 import SocialPostCard from "@/components/marketing/SocialPostCard";
 import ApprovalButtons from "@/components/marketing/ApprovalButtons";
 import WeekVideoAttach from "@/components/marketing/WeekVideoAttach";
+import { WeekViewSkeleton } from "@/components/Skeleton";
 
 interface WeekPost {
   id: string;
@@ -78,11 +79,7 @@ export default function MarketingWeekPage() {
   }
 
   if (loading) {
-    return (
-      <div className="page-pad">
-        <p className="muted">Cargando vista domingo…</p>
-      </div>
-    );
+    return <WeekViewSkeleton />;
   }
 
   if (error) {

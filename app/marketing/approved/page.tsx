@@ -6,6 +6,7 @@ import Link from "next/link";
 import SocialPostCard from "@/components/marketing/SocialPostCard";
 import PublishButton from "@/components/marketing/PublishButton";
 import EmptyState from "@/components/EmptyState";
+import { MarketingPostsSkeleton } from "@/components/Skeleton";
 
 interface Post {
   id: string;
@@ -55,12 +56,7 @@ export default function ApprovedPostsPage() {
   }
 
   if (loading) {
-    return (
-      <div className="page-pad">
-        <h1>Listo para publicar</h1>
-        <p className="muted">Cargando…</p>
-      </div>
-    );
+    return <MarketingPostsSkeleton />;
   }
 
   return (

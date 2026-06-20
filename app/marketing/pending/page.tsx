@@ -7,6 +7,7 @@ import Link from "next/link";
 import SocialPostCard from "@/components/marketing/SocialPostCard";
 import ApprovalButtons from "@/components/marketing/ApprovalButtons";
 import EmptyState from "@/components/EmptyState";
+import { MarketingPostsSkeleton } from "@/components/Skeleton";
 
 interface SocialPost {
   id: string;
@@ -92,12 +93,7 @@ export default function PendingPostsPage() {
   }
 
   if (loading) {
-    return (
-      <div className="page-pad">
-        <h1>Pendientes de aprobación</h1>
-        <p className="muted">Cargando…</p>
-      </div>
-    );
+    return <MarketingPostsSkeleton />;
   }
 
   return (

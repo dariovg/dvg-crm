@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 import MarketingConexionesPage from "./MarketingConexionesClient";
+import { ConexionesSkeleton } from "@/components/Skeleton";
 
 export default function ConexionesPage() {
   return (
-    <Suspense fallback={<div className="page-pad"><p className="muted">Cargando…</p></div>}>
+    <Suspense fallback={<ConexionesSkeleton />}>
       <MarketingConexionesPage />
     </Suspense>
   );
