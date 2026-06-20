@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { fetchScopedContacts } from "@/app/actions";
 import { getAuthSession, listTeamUsers } from "@/lib/auth-server";
-import { canAssignContacts, isStaff } from "@/lib/permissions";
+import { canAssignContacts, canDeleteContact, isStaff } from "@/lib/permissions";
 import NewLeadForm from "@/components/NewLeadForm";
 import LeadsFilters, { LeadsTable } from "@/components/LeadsTable";
 
@@ -10,6 +10,7 @@ export default async function LeadsPage({ searchParams }) {
   const session = await getAuthSession();
   const staff = isStaff(session);
   const canAssign = canAssignContacts(session);
+  const canDelete = canDeleteContact(session);
   const team = canAssign ? await listTeamUsers() : [];
 
   const contacts = await fetchScopedContacts({
@@ -36,7 +37,12 @@ export default async function LeadsPage({ searchParams }) {
         <LeadsFilters team={team} canAssign={canAssign} />
       </Suspense>
 
-      <LeadsTable contacts={contacts} team={team} canAssign={canAssign} />
+      <LeadsTable
+        contacts={contacts}
+        team={team}
+        canAssign={canAssign}
+        canDelete={canDelete}
+      />
     </>
   );
 }

@@ -1875,6 +1875,17 @@ body {
   padding: 0 .35rem;
 }
 .btn-link-sm { font-size: .82rem; font-weight: 700; color: var(--orange); text-decoration: none; }
+.btn-link-danger { color: #dc2626; background: none; border: none; cursor: pointer; padding: 0; }
+.btn-link-danger:hover { text-decoration: underline; }
+.lead-card-actions,
+.td-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+.lead-card-actions { margin-top: 0.65rem; }
+.contact-editor-error { margin-bottom: 0.75rem; }
 .card-header-row {
   display: flex;
   align-items: center;
@@ -2700,19 +2711,64 @@ body {
   .sidebar,
   .notif-bell-wrap,
   .quote-pdf-toolbar,
-  .no-print { display: none !important; }
-  .app-shell { display: block; }
-  .app-main {
-    max-width: none;
-    padding: 0;
+  .no-print,
+  .onboarding-card,
+  .app-topbar,
+  .bottom-tab-bar,
+  .mobile-drawer,
+  .mobile-drawer-backdrop,
+  .mobile-menu-btn,
+  .help-fab,
+  .breadcrumb { display: none !important; }
+
+  body * {
+    visibility: hidden;
   }
+
+  .quote-pdf,
+  .quote-pdf * {
+    visibility: visible;
+  }
+
   .quote-pdf {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
     box-shadow: none;
     border-radius: 0;
     padding: 0;
     max-width: none;
   }
+
+  .quote-pdf-logo {
+    max-width: 220px;
+    height: auto;
+  }
+
+  .app-shell { display: block; }
+  .app-main {
+    max-width: none;
+    padding: 0;
+  }
   body { background: #fff; }
+}
+
+.quote-print-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 2.5rem;
+}
+
+.quote-pdf-logo {
+  display: block;
+  max-width: 220px;
+  height: auto;
+}
+
+.quote-pack-hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
 }
 
 /* ——— Mobile navigation ——— */
@@ -3946,8 +4002,6 @@ body {
   .mobile-drawer-backdrop,
   .mobile-menu-btn { display: none !important; }
 }
-
-/* Skeleton loaders */
 @keyframes skeleton-shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }

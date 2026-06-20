@@ -21,8 +21,11 @@ import {
   catalogPriceForPack,
   computeQuoteSubtotal,
   computeQuoteTotal,
+  computeQuoteVat,
+  computeQuoteTotalWithVat,
   needsApproval,
   QUOTE_BILLING_LABEL,
+  VAT_RATE,
 } from "@/lib/quotes";
 import { QUOTE_PROJECT_LABEL, QUOTE_TEMPLATES } from "@/lib/quote-templates";
 
@@ -53,10 +56,11 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
   const [message, setMessage] = useState("");
 
   const subtotal = computeQuoteSubtotal(lines);
-  const total = computeQuoteTotal(
-    { discountPercent: discountPercent || null },
-    lines
-  );
+  const quoteMeta = { discountPercent: discountPercent || null };
+  const baseTotal = computeQuoteTotal(quoteMeta, lines);
+  const vatTotal = computeQuoteVat(quoteMeta, lines);
+  const totalWithVat = computeQuoteTotalWithVat(quoteMeta, lines);
+  const vatPercent = Math.round(VAT_RATE * 100);
   const requiresApproval = needsApproval({ billing, discountPercent: discountPercent || null }, lines);
 
   function syncPackPrices(nextBilling) {
@@ -79,19 +83,23 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
   }
 
   function addPack(packId) {
+    if (lines.some((l) => l.type === "PACK" && l.packId === packId)) return;
     const price = catalogPriceForPack(packId, billing);
-    const withoutOldPack = lines.filter((l) => l.type !== "PACK");
     setLines([
+      ...lines,
       {
         type: "PACK",
         packId,
         description: packLineDescription(packId),
         quantity: 1,
         unitPrice: price,
-        sortOrder: 0,
+        sortOrder: lines.length,
       },
-      ...withoutOldPack.map((l, i) => ({ ...l, sortOrder: i + 1 })),
     ]);
+  }
+
+  function removePack(packId) {
+    setLines(lines.filter((l) => !(l.type === "PACK" && l.packId === packId)));
   }
 
   async function handleApplyTemplate(type) {
@@ -125,7 +133,7 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
         notes,
         discountPercent,
         projectType,
-        packId: lines.find((l) => l.type === "PACK")?.packId || null,
+        packId: lines.find((l) => l.type === "PACK")?.packId ?? null,
       });
       setMessage(
         result.needsApproval
@@ -226,7 +234,7 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
 
       <div className="quote-summary-bar">
         <span>{quote.contact.name}</span>
-        <strong>{formatEuro(total)}/mes</strong>
+        <strong>{formatEuro(totalWithVat)}/mes (IVA incl.)</strong>
       </div>
 
       <Accordion
@@ -251,7 +259,7 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
           title="Tipo de proyecto y plan"
           subtitle={QUOTE_PROJECT_LABEL[projectType]}
           defaultOpen
-          badge={formatEuro(total)}
+          badge={formatEuro(totalWithVat)}
         >
           <div className="quote-template-picker">
             {Object.values(QUOTE_TEMPLATES).map((tpl) => (
@@ -277,22 +285,28 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
             </select>
           </div>
           <div className="quote-pack-picker">
-            {PLANS.map((plan) => (
-              <button
-                key={plan.id}
-                type="button"
-                className={`quote-pack-btn${
-                  lines.some((l) => l.packId === plan.id) ? " quote-pack-btn--active" : ""
-                }`}
-                onClick={() => addPack(plan.id)}
-              >
-                <strong>{plan.name}</strong>
-                <span>
-                  {formatEuro(catalogPriceForPack(plan.id, billing))}/mes
-                </span>
-              </button>
-            ))}
+            {PLANS.map((plan) => {
+              const selected = lines.some((l) => l.type === "PACK" && l.packId === plan.id);
+              return (
+                <button
+                  key={plan.id}
+                  type="button"
+                  className={`quote-pack-btn${selected ? " quote-pack-btn--active" : ""}`}
+                  onClick={() => (selected ? removePack(plan.id) : addPack(plan.id))}
+                  title={selected ? "Quitar plan del presupuesto" : "Añadir plan al presupuesto"}
+                >
+                  <strong>{plan.name}</strong>
+                  <span>
+                    {formatEuro(catalogPriceForPack(plan.id, billing))}/mes
+                    {selected ? " · Añadido" : ""}
+                  </span>
+                </button>
+              );
+            })}
           </div>
+          <p className="muted quote-pack-hint">
+            Puedes combinar varios planes y líneas personalizadas en el mismo presupuesto.
+          </p>
         </Accordion>
       )}
 
@@ -326,9 +340,17 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
               <strong>{discountPercent}%</strong>
             </div>
           ) : null}
+          <div>
+            <span>Base imponible</span>
+            <strong>{formatEuro(baseTotal)}</strong>
+          </div>
+          <div>
+            <span>IVA ({vatPercent}%)</span>
+            <strong>{formatEuro(vatTotal)}</strong>
+          </div>
           <div className="quote-total-row">
-            <span>Total {billing === "ANNUAL" ? "(mensual, plan anual)" : "(mensual)"}</span>
-            <strong>{formatEuro(total)}</strong>
+            <span>Total {billing === "ANNUAL" ? "(mensual, plan anual)" : "(mensual)"} con IVA</span>
+            <strong>{formatEuro(totalWithVat)}</strong>
           </div>
         </div>
       </Accordion>

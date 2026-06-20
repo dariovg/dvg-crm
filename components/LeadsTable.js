@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { assignContact, bulkAssignContacts } from "@/app/actions";
+import { assignContact, bulkAssignContacts, deleteContact } from "@/app/actions";
 import StatusBadge from "@/components/StatusBadge";
 import AssigneeBadge from "@/components/AssigneeBadge";
 import LeadScoreBadge from "@/components/LeadScoreBadge";
@@ -153,10 +153,11 @@ export default function LeadsFilters({ team, canAssign }) {
   );
 }
 
-export function LeadsTable({ contacts, team, canAssign }) {
+export function LeadsTable({ contacts, team, canAssign, canDelete = false }) {
   const router = useRouter();
   const [selected, setSelected] = useState([]);
   const [bulkAssignee, setBulkAssignee] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
   function toggle(id) {
     setSelected((prev) =>
@@ -174,6 +175,22 @@ export function LeadsTable({ contacts, team, canAssign }) {
     await bulkAssignContacts(selected, bulkAssignee || null);
     setSelected([]);
     router.refresh();
+  }
+
+  async function handleDelete(contact) {
+    const ok = window.confirm(
+      `¿Eliminar el lead "${contact.name}"?\n\nSe borrarán también citas, tareas, presupuestos e historial.`
+    );
+    if (!ok) return;
+    setDeletingId(contact.id);
+    try {
+      await deleteContact(contact.id);
+      router.refresh();
+    } catch (err) {
+      window.alert(err.message || "No se pudo eliminar el lead");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
@@ -251,6 +268,21 @@ export function LeadsTable({ contacts, team, canAssign }) {
                 )}
               </div>
             )}
+            <div className="lead-card-actions">
+              <Link href={`/leads/${c.id}`} className="btn-link-sm">
+                Editar
+              </Link>
+              {canDelete && (
+                <button
+                  type="button"
+                  className="btn-link-sm btn-link-danger"
+                  onClick={() => handleDelete(c)}
+                  disabled={deletingId === c.id}
+                >
+                  {deletingId === c.id ? "Eliminando…" : "Eliminar"}
+                </button>
+              )}
+            </div>
           </article>
         ))}
         {!contacts.length && (
@@ -275,6 +307,7 @@ export function LeadsTable({ contacts, team, canAssign }) {
               <th>Origen</th>
               {canAssign && <th>Asignado a</th>}
               <th>Creado</th>
+              <th className="th-actions">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -328,6 +361,21 @@ export function LeadsTable({ contacts, team, canAssign }) {
                   </td>
                 )}
                 <td>{new Date(c.createdAt).toLocaleDateString("es-ES")}</td>
+                <td className="td-actions">
+                  <Link href={`/leads/${c.id}`} className="btn-link-sm">
+                    Editar
+                  </Link>
+                  {canDelete && (
+                    <button
+                      type="button"
+                      className="btn-link-sm btn-link-danger"
+                      onClick={() => handleDelete(c)}
+                      disabled={deletingId === c.id}
+                    >
+                      {deletingId === c.id ? "…" : "Eliminar"}
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

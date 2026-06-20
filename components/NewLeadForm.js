@@ -10,6 +10,7 @@ export default function NewLeadForm({ team, canAssign }) {
   const [open, setOpen] = useState(false);
   const [duplicate, setDuplicate] = useState(null);
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -38,15 +39,21 @@ export default function NewLeadForm({ team, canAssign }) {
   async function submit(allowDuplicate = false) {
     setPending(true);
     setDuplicate(null);
-    const result = await createManualContact({ ...form, allowDuplicate });
-    setPending(false);
-    if (!result.ok) {
-      setDuplicate(result.duplicate);
-      return;
+    setError("");
+    try {
+      const result = await createManualContact({ ...form, allowDuplicate });
+      if (!result.ok) {
+        setDuplicate(result.duplicate);
+        return;
+      }
+      setOpen(false);
+      router.push(`/leads/${result.contactId}`);
+      router.refresh();
+    } catch (err) {
+      setError(err.message || "No se pudo crear el lead");
+    } finally {
+      setPending(false);
     }
-    setOpen(false);
-    router.push(`/leads/${result.contactId}`);
-    router.refresh();
   }
 
   if (!open) {
@@ -60,6 +67,7 @@ export default function NewLeadForm({ team, canAssign }) {
   return (
     <div className="card new-lead-card">
       <h2>Nuevo lead</h2>
+      {error && <p className="form-error">{error}</p>}
       {duplicate && (
         <div className="alert-warn">
           Ya existe <Link href={`/leads/${duplicate.id}`}>{duplicate.name}</Link>{" "}

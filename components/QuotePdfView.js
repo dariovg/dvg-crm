@@ -1,16 +1,22 @@
-import Image from "next/image";
 import {
   computeLineTotal,
+  computeLineVat,
   computeQuoteSubtotal,
   computeQuoteTotal,
+  computeQuoteVat,
+  computeQuoteTotalWithVat,
   FOOTER_TEXT,
   QUOTE_BILLING_LABEL,
+  VAT_RATE,
 } from "@/lib/quotes";
 import { formatEuro } from "@/lib/pricing-catalog";
 
 export default function QuotePdfView({ quote, showSignature = false, trackingPixel = null }) {
   const subtotal = computeQuoteSubtotal(quote.lines);
-  const total = computeQuoteTotal(quote, quote.lines);
+  const baseTotal = computeQuoteTotal(quote, quote.lines);
+  const vatTotal = computeQuoteVat(quote, quote.lines);
+  const grandTotal = computeQuoteTotalWithVat(quote, quote.lines);
+  const vatPercent = Math.round(VAT_RATE * 100);
   const issued = new Date(quote.createdAt).toLocaleDateString("es-ES", {
     day: "numeric",
     month: "long",
@@ -28,12 +34,13 @@ export default function QuotePdfView({ quote, showSignature = false, trackingPix
     <div className="quote-pdf">
       <header className="quote-pdf-header">
         <div className="quote-pdf-brand">
-          <Image
-            src="/logo-dvg-studio.svg"
-            alt="DVG Studio"
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo-dvg-studio.png"
+            alt="DVG Studio — hacIA lo imparable"
             width={220}
             height={35}
-            priority
+            className="quote-pdf-logo"
           />
           <p className="quote-pdf-tagline">Agente de IA · Webs y apps</p>
         </div>
@@ -76,27 +83,35 @@ export default function QuotePdfView({ quote, showSignature = false, trackingPix
             <th>Cant.</th>
             <th>Precio unit.</th>
             <th>Dto.</th>
-            <th>Importe</th>
+            <th>Base</th>
+            <th>IVA {vatPercent}%</th>
+            <th>Total</th>
           </tr>
         </thead>
         <tbody>
-          {quote.lines.map((line) => (
-            <tr key={line.id}>
-              <td>
-                <pre className="quote-pdf-line-desc">{line.description}</pre>
-              </td>
-              <td>{line.quantity}</td>
-              <td>{formatEuro(line.unitPrice)}</td>
-              <td>{line.discountPercent ? `${line.discountPercent}%` : "—"}</td>
-              <td>{formatEuro(computeLineTotal(line))}</td>
-            </tr>
-          ))}
+          {quote.lines.map((line) => {
+            const lineBase = computeLineTotal(line);
+            const lineVat = computeLineVat(line);
+            return (
+              <tr key={line.id}>
+                <td>
+                  <pre className="quote-pdf-line-desc">{line.description}</pre>
+                </td>
+                <td>{line.quantity}</td>
+                <td>{formatEuro(line.unitPrice)}</td>
+                <td>{line.discountPercent ? `${line.discountPercent}%` : "—"}</td>
+                <td>{formatEuro(lineBase)}</td>
+                <td>{formatEuro(lineVat)}</td>
+                <td>{formatEuro(lineBase + lineVat)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 
       <div className="quote-pdf-totals">
         <div>
-          <span>Subtotal</span>
+          <span>Subtotal (base imponible)</span>
           <span>{formatEuro(subtotal)}</span>
         </div>
         {quote.discountPercent ? (
@@ -105,13 +120,20 @@ export default function QuotePdfView({ quote, showSignature = false, trackingPix
             <span>−{formatEuro(Math.round(subtotal * (quote.discountPercent / 100)))}</span>
           </div>
         ) : null}
+        <div>
+          <span>Base imponible</span>
+          <span>{formatEuro(baseTotal)}</span>
+        </div>
+        <div>
+          <span>IVA ({vatPercent}%)</span>
+          <span>{formatEuro(vatTotal)}</span>
+        </div>
         <div className="quote-pdf-total-final">
           <span>
-            Total {quote.billing === "ANNUAL" ? "mensual (compromiso anual)" : "mensual"}
+            Total {quote.billing === "ANNUAL" ? "mensual (compromiso anual)" : "mensual"} con IVA
           </span>
-          <strong>{formatEuro(total)}</strong>
+          <strong>{formatEuro(grandTotal)}</strong>
         </div>
-        <p className="quote-pdf-iva">Importes sin IVA (21% no incluido)</p>
       </div>
 
       {quote.notes && (

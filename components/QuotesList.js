@@ -1,7 +1,7 @@
 import Link from "next/link";
 import QuoteStatusBadge from "@/components/QuoteStatusBadge";
 import EmptyState from "@/components/EmptyState";
-import { computeQuoteTotal } from "@/lib/quotes";
+import { computeQuoteTotalWithVat } from "@/lib/quotes";
 import { formatEuro } from "@/lib/pricing-catalog";
 
 export default function QuotesList({ quotes, showContact = true, isAdmin = false }) {
@@ -48,7 +48,7 @@ export default function QuotesList({ quotes, showContact = true, isAdmin = false
               <td>
                 <QuoteStatusBadge status={q.status} />
               </td>
-              <td>{formatEuro(computeQuoteTotal(q, q.lines))}</td>
+              <td>{formatEuro(computeQuoteTotalWithVat(q, q.lines))}</td>
               <td>{new Date(q.createdAt).toLocaleDateString("es-ES")}</td>
               {isAdmin && (
                 <td className="quote-actions-cell">

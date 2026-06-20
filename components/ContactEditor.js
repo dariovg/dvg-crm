@@ -138,6 +138,7 @@ export default function ContactEditor({
   return (
     <div className="card contact-editor">
       <h2>Editar lead</h2>
+      {error && <p className="form-error contact-editor-error">{error}</p>}
 
       <form onSubmit={saveProfile} className="contact-editor-section">
         <h3 className="contact-editor-sub">Datos de contacto</h3>
@@ -263,7 +264,6 @@ export default function ContactEditor({
           <label>Notas internas</label>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
-        {error && <p className="form-error">{error}</p>}
         <button type="submit" className="btn-sm" disabled={saving}>
           Guardar notas
         </button>
