@@ -3,7 +3,7 @@
 import { formatEuro } from "@/lib/pricing-catalog";
 import { computeLineTotal } from "@/lib/quotes";
 
-export default function QuoteLineEditor({ lines, onChange, readOnly = false }) {
+export default function QuoteLineEditor({ lines, onChange, readOnly = false, compact = false }) {
   function updateLine(index, field, value) {
     const next = lines.map((l, i) =>
       i === index ? { ...l, [field]: value } : l
@@ -51,7 +51,7 @@ export default function QuoteLineEditor({ lines, onChange, readOnly = false }) {
             <th>Descripción</th>
             <th>Cant.</th>
             <th>Precio unit.</th>
-            <th>Dto. %</th>
+            {!compact && <th>Dto. %</th>}
             <th>Total</th>
             {!readOnly && <th />}
           </tr>
@@ -100,27 +100,29 @@ export default function QuoteLineEditor({ lines, onChange, readOnly = false }) {
                   />
                 )}
               </td>
-              <td>
-                {readOnly ? (
-                  line.discountPercent ? `${line.discountPercent}%` : "—"
-                ) : (
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    placeholder="—"
-                    value={line.discountPercent ?? ""}
-                    onChange={(e) =>
-                      updateLine(
-                        i,
-                        "discountPercent",
-                        e.target.value === "" ? null : parseInt(e.target.value, 10)
-                      )
-                    }
-                    className="quote-line-input-sm"
-                  />
-                )}
-              </td>
+              {!compact && (
+                <td>
+                  {readOnly ? (
+                    line.discountPercent ? `${line.discountPercent}%` : "—"
+                  ) : (
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="—"
+                      value={line.discountPercent ?? ""}
+                      onChange={(e) =>
+                        updateLine(
+                          i,
+                          "discountPercent",
+                          e.target.value === "" ? null : parseInt(e.target.value, 10)
+                        )
+                      }
+                      className="quote-line-input-sm"
+                    />
+                  )}
+                </td>
+              )}
               <td>{formatEuro(computeLineTotal(line))}</td>
               {!readOnly && (
                 <td>

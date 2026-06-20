@@ -28,6 +28,7 @@ export default async function QuoteDetailPage({ params }) {
         <Link href={`/leads/${quote.contactId}`}>{quote.contact.name}</Link>
       </p>
       <QuoteEditor
+        key={`${quote.id}-${quote.updatedAt}`}
         quote={quote}
         isAdmin={isAdmin(session)}
         canEdit={canEditQuote(session, quote)}

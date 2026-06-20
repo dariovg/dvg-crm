@@ -3,7 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+import Accordion from "@/components/Accordion";
 import QuoteLineEditor from "@/components/QuoteLineEditor";
+import QuoteSharePanel from "@/components/QuoteSharePanel";
 import QuoteStatusBadge from "@/components/QuoteStatusBadge";
 import {
   saveQuote,
@@ -12,6 +14,7 @@ import {
   markQuoteSent,
   markQuoteAccepted,
   duplicateQuote,
+  applyQuoteTemplate,
 } from "@/app/actions";
 import { PLANS, formatEuro, packLineDescription } from "@/lib/pricing-catalog";
 import {
@@ -21,12 +24,15 @@ import {
   needsApproval,
   QUOTE_BILLING_LABEL,
 } from "@/lib/quotes";
+import { QUOTE_PROJECT_LABEL, QUOTE_TEMPLATES } from "@/lib/quote-templates";
 
 export default function QuoteEditor({ quote, isAdmin, canEdit }) {
   const router = useRouter();
   const readOnly = !canEdit || ["SENT", "ACCEPTED"].includes(quote.status);
+  const showShare = ["SENT", "ACCEPTED"].includes(quote.status);
 
   const [billing, setBilling] = useState(quote.billing);
+  const [projectType, setProjectType] = useState(quote.projectType || "IA");
   const [notes, setNotes] = useState(quote.notes || "");
   const [discountPercent, setDiscountPercent] = useState(
     quote.discountPercent ?? ""
@@ -46,13 +52,12 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
-  const quoteData = { billing, discountPercent: discountPercent || null };
   const subtotal = computeQuoteSubtotal(lines);
   const total = computeQuoteTotal(
     { discountPercent: discountPercent || null },
     lines
   );
-  const requiresApproval = needsApproval(quoteData, lines);
+  const requiresApproval = needsApproval({ billing, discountPercent: discountPercent || null }, lines);
 
   function syncPackPrices(nextBilling) {
     setLines((prev) =>
@@ -89,6 +94,27 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
     ]);
   }
 
+  async function handleApplyTemplate(type) {
+    if (readOnly || type === projectType) return;
+    if (
+      lines.length > 0 &&
+      !window.confirm("¿Reemplazar líneas actuales con la plantilla seleccionada?")
+    ) {
+      return;
+    }
+    setBusy(true);
+    setMessage("");
+    try {
+      await applyQuoteTemplate(quote.id, type);
+      setProjectType(type);
+      router.refresh();
+    } catch (e) {
+      setMessage(e.message || "Error al aplicar plantilla");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleSave() {
     setBusy(true);
     setMessage("");
@@ -98,6 +124,7 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
         billing,
         notes,
         discountPercent,
+        projectType,
         packId: lines.find((l) => l.type === "PACK")?.packId || null,
       });
       setMessage(
@@ -180,6 +207,7 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
           <h2>{quote.number}</h2>
           <p className="quote-editor-meta">
             <QuoteStatusBadge status={quote.status} /> ·{" "}
+            {QUOTE_PROJECT_LABEL[projectType] || projectType} ·{" "}
             {QUOTE_BILLING_LABEL[billing]}
             {requiresApproval && (
               <span className="quote-warning"> · Requiere aprobación</span>
@@ -196,8 +224,16 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
         </div>
       </div>
 
-      <div className="card">
-        <h3>Cliente</h3>
+      <div className="quote-summary-bar">
+        <span>{quote.contact.name}</span>
+        <strong>{formatEuro(total)}/mes</strong>
+      </div>
+
+      <Accordion
+        title="Cliente"
+        subtitle={`${quote.contact.email}${quote.contact.company ? ` · ${quote.contact.company}` : ""}`}
+        defaultOpen={false}
+      >
         <p>
           <strong>{quote.contact.name}</strong>
           {quote.contact.company && ` · ${quote.contact.company}`}
@@ -208,11 +244,31 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
             Válido hasta: {new Date(quote.validUntil).toLocaleDateString("es-ES")}
           </p>
         )}
-      </div>
+      </Accordion>
 
       {!readOnly && (
-        <div className="card">
-          <h3>Plan / facturación</h3>
+        <Accordion
+          title="Tipo de proyecto y plan"
+          subtitle={QUOTE_PROJECT_LABEL[projectType]}
+          defaultOpen
+          badge={formatEuro(total)}
+        >
+          <div className="quote-template-picker">
+            {Object.values(QUOTE_TEMPLATES).map((tpl) => (
+              <button
+                key={tpl.id}
+                type="button"
+                className={`quote-template-btn${
+                  projectType === tpl.id ? " quote-template-btn--active" : ""
+                }`}
+                onClick={() => handleApplyTemplate(tpl.id)}
+                disabled={busy}
+              >
+                <strong>{tpl.label}</strong>
+                <span>{tpl.description}</span>
+              </button>
+            ))}
+          </div>
           <div className="field">
             <label>Facturación</label>
             <select value={billing} onChange={(e) => handleBillingChange(e.target.value)}>
@@ -237,12 +293,15 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
               </button>
             ))}
           </div>
-        </div>
+        </Accordion>
       )}
 
-      <div className="card">
-        <h3>Líneas</h3>
-        <QuoteLineEditor lines={lines} onChange={setLines} readOnly={readOnly} />
+      <Accordion
+        title="Líneas del presupuesto"
+        subtitle={`${lines.length} líneas · ${formatEuro(subtotal)} subtotal`}
+        defaultOpen
+      >
+        <QuoteLineEditor lines={lines} onChange={setLines} readOnly={readOnly} compact={!readOnly} />
         <div className="quote-totals">
           <div>
             <span>Subtotal</span>
@@ -272,10 +331,9 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
             <strong>{formatEuro(total)}</strong>
           </div>
         </div>
-      </div>
+      </Accordion>
 
-      <div className="card">
-        <h3>Notas internas</h3>
+      <Accordion title="Notas internas" subtitle={notes ? "Con notas" : "Vacío"} defaultOpen={false}>
         {readOnly ? (
           <p>{notes || "—"}</p>
         ) : (
@@ -286,7 +344,21 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
             placeholder="Notas para el equipo (no aparecen en el PDF)"
           />
         )}
-      </div>
+      </Accordion>
+
+      {showShare && (
+        <Accordion
+          title="Envío y seguimiento"
+          subtitle={
+            quote.pdfOpenCount > 0
+              ? `${quote.pdfOpenCount} apertura${quote.pdfOpenCount === 1 ? "" : "s"}`
+              : "Sin aperturas"
+          }
+          defaultOpen
+        >
+          <QuoteSharePanel quote={quote} />
+        </Accordion>
+      )}
 
       {quote.approvalNote && quote.status === "REJECTED" && (
         <div className="card quote-reject-note">
@@ -307,9 +379,9 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
             Marcar enviado
           </button>
         )}
-        {canEdit && quote.status === "SENT" && (
+        {canEdit && quote.status === "SENT" && !quote.signedAt && (
           <button type="button" className="btn-primary" onClick={handleAccepted} disabled={busy}>
-            Marcar aceptado
+            Marcar aceptado (manual)
           </button>
         )}
         {isAdmin && quote.status === "PENDING_APPROVAL" && (
