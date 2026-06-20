@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import QuoteSignForm from "@/components/QuoteSignForm";
 import { getQuoteByShareToken } from "@/lib/quote-tracking";
+import { rateLimitRequest } from "@/lib/rate-limit";
 import Link from "next/link";
 
 export const metadata = {
@@ -10,6 +12,13 @@ export const metadata = {
 
 export default async function PublicQuoteSignPage({ params }) {
   const { token } = await params;
+  const hdrs = await headers();
+  const { ok } = rateLimitRequest(hdrs, "quote-sign-page", {
+    limit: 30,
+    windowMs: 60_000,
+  });
+  if (!ok) notFound();
+
   const quote = await getQuoteByShareToken(token);
   if (!quote) notFound();
 

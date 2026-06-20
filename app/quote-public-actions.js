@@ -1,14 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getQuoteByShareToken, recordQuotePdfOpen } from "@/lib/quote-tracking";
+import { rateLimitRequest } from "@/lib/rate-limit";
+
+async function assertPublicRateLimit(scope) {
+  const hdrs = await headers();
+  const { ok } = rateLimitRequest(hdrs, scope, { limit: 30, windowMs: 60_000 });
+  if (!ok) throw new Error("Demasiadas solicitudes. Inténtalo más tarde.");
+}
 
 export async function trackQuoteOpen(shareToken) {
+  await assertPublicRateLimit("quote-open");
   return recordQuotePdfOpen(shareToken);
 }
 
 export async function signQuoteByToken(shareToken, { mode, dataUrl, signedByName }) {
+  await assertPublicRateLimit("quote-sign");
   const quote = await getQuoteByShareToken(shareToken);
   if (!quote) throw new Error("Enlace no válido o expirado");
   if (quote.status !== "SENT") {

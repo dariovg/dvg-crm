@@ -1,11 +1,18 @@
 import { prisma } from "@/lib/prisma";
 import { findBlobStorageUrl } from "@/lib/social/video-storage.js";
+import { rateLimitResponse } from "@/lib/rate-limit";
 
 /** Sirve el vídeo en el dominio del CRM (TikTok PULL_FROM_URL). */
 export async function GET(
-  _request,
+  request,
   { params }: { params: Promise<{ postId: string }> }
 ) {
+  const limited = rateLimitResponse(request, "marketing-video", {
+    limit: 30,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
   const raw = (await params).postId;
   const postId = raw.replace(/\.mp4$/i, "");
 

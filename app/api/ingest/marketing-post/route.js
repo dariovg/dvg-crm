@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyIngestSecret } from "@/lib/ingest";
 import { getPlatformLimit } from "@/lib/social/platform-limits.js";
+import { rateLimitResponse } from "@/lib/rate-limit";
 
 const VALID_PLATFORMS = new Set([
   "TWITTER",
@@ -97,6 +98,12 @@ async function createDraft({
 
 /** Borrador automático desde Bedrock, Telegram o scripts externos. */
 export async function POST(req) {
+  const limited = rateLimitResponse(req, "ingest-marketing-post", {
+    limit: 30,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
   if (!verifyIngestSecret(req)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }

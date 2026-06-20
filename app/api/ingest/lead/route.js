@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { verifyIngestSecret, upsertContactFromLead, cleanPhone } from "@/lib/ingest";
+import { rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(req) {
+  const limited = rateLimitResponse(req, "ingest-lead", {
+    limit: 60,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
   if (!verifyIngestSecret(req)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }

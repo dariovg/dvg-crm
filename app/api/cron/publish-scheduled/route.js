@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { publishDueScheduledPosts } from "@/lib/social/publish.js";
 import { syncAllPublishedMetrics } from "@/lib/social/metrics.js";
+import { rateLimitResponse } from "@/lib/rate-limit";
 
 /** Vercel Cron: publica posts programados y sincroniza métricas. */
 export async function GET(req) {
+  const limited = rateLimitResponse(req, "cron-publish", {
+    limit: 10,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
   const auth = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 

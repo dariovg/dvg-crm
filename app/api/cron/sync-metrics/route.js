@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import { syncAllPublishedMetrics } from "@/lib/social/metrics.js";
+import { rateLimitResponse } from "@/lib/rate-limit";
 
 /** Cron: sincroniza métricas de posts publicados desde X/TikTok. */
 export async function GET(req) {
+  const limited = rateLimitResponse(req, "cron-metrics", {
+    limit: 10,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
   const auth = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 

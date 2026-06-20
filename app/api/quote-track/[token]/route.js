@@ -1,7 +1,15 @@
+import { NextResponse } from "next/server";
 import { recordQuotePdfOpen } from "@/lib/quote-tracking";
+import { rateLimitResponse } from "@/lib/rate-limit";
 
 /** Pixel 1×1 para seguimiento en clientes de correo (img src). */
-export async function GET(_req, { params }) {
+export async function GET(req, { params }) {
+  const limited = rateLimitResponse(req, "quote-track", {
+    limit: 120,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
   const { token } = await params;
   await recordQuotePdfOpen(token);
 
