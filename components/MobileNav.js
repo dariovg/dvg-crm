@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { NAV_LINKS, TAB_LINKS } from "@/lib/nav-links";
-import { isStaff, canAccessMarketing } from "@/lib/permissions";
+import { getNavLinksForSession, getTabLinksForSession } from "@/lib/nav-links";
+import { canAccessSalesCrm } from "@/lib/permissions";
 import ThemeToggle from "@/components/ThemeToggle";
 
 function NavIcon({ name }) {
@@ -35,6 +35,12 @@ function NavIcon({ name }) {
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
         <path d="M9 11l3 3L22 4" />
         <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+      </svg>
+    ),
+    marketing: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+        <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
       </svg>
     ),
     more: (
@@ -78,11 +84,15 @@ export function MobileDrawer({ open, onClose }) {
   const role = session?.user?.role;
   const isAdmin = role === "ADMIN";
   const isManager = role === "MANAGER";
-  const marketing = canAccessMarketing({ user: session?.user });
-  const staff = isStaff({ user: session?.user });
+  const navLinks = getNavLinksForSession(session);
 
   function handleLinkClick() {
     onClose();
+  }
+
+  function isActive(href) {
+    if (href === "/dashboard") return pathname === "/dashboard";
+    return pathname === href || pathname.startsWith(`${href}/`);
   }
 
   return (
@@ -106,52 +116,16 @@ export function MobileDrawer({ open, onClose }) {
           </button>
         </div>
         <nav className="mobile-drawer-nav">
-          {NAV_LINKS.map((l) => (
+          {navLinks.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className={`mobile-drawer-link${pathname === l.href || pathname.startsWith(`${l.href}/`) ? " mobile-drawer-link--active" : ""}`}
+              className={`mobile-drawer-link${isActive(l.href) ? " mobile-drawer-link--active" : ""}`}
               onClick={handleLinkClick}
             >
               {l.label}
             </Link>
           ))}
-          {marketing && (
-            <Link
-              href="/marketing"
-              className={`mobile-drawer-link${pathname.startsWith("/marketing") ? " mobile-drawer-link--active" : ""}`}
-              onClick={handleLinkClick}
-            >
-              Marketing
-            </Link>
-          )}
-          {isAdmin && (
-            <>
-              <Link
-                href="/admin/users"
-                className={`mobile-drawer-link${pathname.startsWith("/admin/users") ? " mobile-drawer-link--active" : ""}`}
-                onClick={handleLinkClick}
-              >
-                Equipo
-              </Link>
-              <Link
-                href="/admin/security"
-                className={`mobile-drawer-link${pathname.startsWith("/admin/security") ? " mobile-drawer-link--active" : ""}`}
-                onClick={handleLinkClick}
-              >
-                Seguridad
-              </Link>
-            </>
-          )}
-          {staff && (
-            <Link
-              href="/leads/import"
-              className={`mobile-drawer-link${pathname.startsWith("/leads/import") ? " mobile-drawer-link--active" : ""}`}
-              onClick={handleLinkClick}
-            >
-              Importar CSV
-            </Link>
-          )}
         </nav>
         <div className="mobile-drawer-foot">
           <ThemeToggle className="theme-toggle--sidebar" />
@@ -164,9 +138,15 @@ export function MobileDrawer({ open, onClose }) {
             <div className="sidebar-user">
               <p>{session.user.name || session.user.email}</p>
               <span
-                className={`role-badge${isAdmin ? " role-badge--admin" : isManager ? " role-badge--manager" : ""}`}
+                className={`role-badge${isAdmin ? " role-badge--admin" : isManager ? " role-badge--manager" : role === "MARKETING" ? " role-badge--marketing" : ""}`}
               >
-                {isAdmin ? "Administración" : isManager ? "Manager" : "Equipo"}
+                {isAdmin
+                  ? "Administración"
+                  : isManager
+                    ? "Manager"
+                    : role === "MARKETING"
+                      ? "Marketing"
+                      : "Equipo"}
               </span>
               <button
                 type="button"
@@ -187,15 +167,36 @@ export function MobileDrawer({ open, onClose }) {
 
 export function BottomTabBar({ onMoreClick }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const tabLinks = getTabLinksForSession(session);
+  const salesAccess = canAccessSalesCrm(session);
 
   function isActive(href) {
     if (href === "/dashboard") return pathname === "/dashboard";
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
+  if (!salesAccess) {
+    return (
+      <nav className="bottom-tab-bar" aria-label="Navegación principal">
+        <Link
+          href="/marketing"
+          className={`bottom-tab${pathname.startsWith("/marketing") ? " bottom-tab--active" : ""}`}
+        >
+          <NavIcon name="marketing" />
+          <span>Marketing</span>
+        </Link>
+        <button type="button" className="bottom-tab" onClick={onMoreClick}>
+          <NavIcon name="more" />
+          <span>Cuenta</span>
+        </button>
+      </nav>
+    );
+  }
+
   return (
     <nav className="bottom-tab-bar" aria-label="Navegación principal">
-      {TAB_LINKS.map((tab) => (
+      {tabLinks.map((tab) => (
         <Link
           key={tab.href}
           href={tab.href}

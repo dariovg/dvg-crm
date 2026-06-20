@@ -14,6 +14,7 @@ import {
   canAccessQuote,
   canApproveQuote,
   canEditQuote,
+  canAccessSalesCrm,
   contactScope,
   isStaff,
   quoteScope,
@@ -104,6 +105,7 @@ export async function findDuplicateByEmail(email) {
 
 export async function createManualContact(data) {
   const session = await requireAuthSession();
+  if (!canAccessSalesCrm(session)) throw new Error("Sin permiso");
   const email = data.email.trim().toLowerCase();
   const name = data.name.trim();
   if (!name || !email) throw new Error("Nombre y email obligatorios");
@@ -449,7 +451,7 @@ export async function createTeamUser({ email, name, password, role }) {
   await requireAdminSession();
   const normalized = email.trim().toLowerCase();
   if (!normalized || !password) throw new Error("Email y contraseña obligatorios");
-  if (!["MEMBER", "MANAGER"].includes(role)) throw new Error("Rol no válido");
+  if (!["MEMBER", "MANAGER", "MARKETING"].includes(role)) throw new Error("Rol no válido");
 
   const existing = await prisma.user.findUnique({ where: { email: normalized } });
   if (existing) throw new Error("Ya existe ese email");
@@ -467,9 +469,17 @@ export async function createTeamUser({ email, name, password, role }) {
 
 export async function updateTeamUser(userId, { name, role }) {
   await requireAdminSession();
-  if (role && !["MEMBER", "MANAGER", "ADMIN"].includes(role)) {
-    throw new Error("Rol no válido");
+  const data = {};
+  if (name?.trim()) data.name = name.trim();
+  if (role) {
+    if (!["MEMBER", "MANAGER", "ADMIN", "MARKETING"].includes(role)) {
+      throw new Error("Rol no válido");
+    }
+    data.role = role;
   }
+  if (!Object.keys(data).length) return;
+
+  await prisma.user.update({ where: { id: userId }, data });
   revalidatePath("/admin/users");
 }
 

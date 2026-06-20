@@ -332,3 +332,16 @@ model PostApproval {
   @@index([approvedById])
   @@index([createdAt])
 }
+
+// Tokens OAuth por red (TikTok, LinkedIn, Meta) — una cuenta por plataforma.
+model SocialConnection {
+  id           String         @id @default(cuid())
+  platform     SocialPlatform @unique
+  accessToken  String         @db.Text
+  refreshToken String?        @db.Text
+  openId       String?
+  scope        String?
+  expiresAt    DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}

@@ -2,7 +2,8 @@ import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
-import { publishSocialPost, isPlatformPublishConfigured } from "@/lib/social/publish.js";
+import { publishSocialPost, isPlatformReadyToPublish } from "@/lib/social/publish.js";
+import { pickVideoUrl } from "@/lib/social/tiktok.js";
 
 export async function POST(
   _request: NextRequest,
@@ -25,13 +26,24 @@ export async function POST(
       return NextResponse.json({ error: "Post no encontrado" }, { status: 404 });
     }
 
-    if (!isPlatformPublishConfigured(post.platform)) {
+    if (!(await isPlatformReadyToPublish(post.platform))) {
       return NextResponse.json(
         {
-          error: `API de ${post.platform} no configurada en el servidor.`,
+          error: `API de ${post.platform} no configurada. Ve a Marketing → Conexiones.`,
           manual: true,
         },
         { status: 503 }
+      );
+    }
+
+    if (post.platform === "TIKTOK" && !pickVideoUrl(post.mediaUrls, postId)) {
+      return NextResponse.json(
+        {
+          error:
+            "TikTok requiere URL de vídeo (.mp4). Enlázala en Vista domingo antes de publicar.",
+          manual: true,
+        },
+        { status: 400 }
       );
     }
 

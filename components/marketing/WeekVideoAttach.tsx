@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface WeekVideoAttachProps {
   postId: string;
@@ -15,12 +15,19 @@ export default function WeekVideoAttach({
 }: WeekVideoAttachProps) {
   const [url, setUrl] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const audioUrl = mediaUrls.find((u) => /\.mp3(\?|$)/i.test(u));
-  const videoUrl = mediaUrls.find((u) => !/\.mp3(\?|$)/i.test(u));
+  const videoUrl = mediaUrls.find(
+    (u) =>
+      !/\.mp3(\?|$)/i.test(u) &&
+      !u.includes("blob.vercel-storage.com") &&
+      /^https:\/\//i.test(u)
+  );
 
-  async function handleSave(e: React.FormEvent) {
+  async function handleLinkUrl(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setMsg(null);
@@ -42,6 +49,30 @@ export default function WeekVideoAttach({
     }
   }
 
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setMsg(null);
+    try {
+      const form = new FormData();
+      form.append("video", file);
+      const res = await fetch(
+        `/api/marketing/posts/${postId}/upload-video`,
+        { method: "POST", body: form }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al subir");
+      setMsg(`Subido al CRM — TikTok usará: ${data.publicUrl}`);
+      onSaved();
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Error al subir");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
   return (
     <div className="marketing-week-video-attach">
       {audioUrl && (
@@ -50,44 +81,59 @@ export default function WeekVideoAttach({
           <audio controls src={audioUrl} className="w-full mt-1" preload="metadata">
             Tu navegador no soporta audio.
           </audio>
-          <p className="muted text-xs mt-1">
-            Graba el reel escuchando este guion o léelo en cámara.
-          </p>
         </div>
       )}
 
       {videoUrl ? (
         <p className="text-sm text-green-700">
-          ✅ Vídeo enlazado:{" "}
+          ✅ Vídeo listo:{" "}
           <a href={videoUrl} target="_blank" rel="noreferrer" className="underline">
-            ver enlace
+            {videoUrl.includes("/api/marketing/video/")
+              ? "en CRM (listo para TikTok)"
+              : "ver enlace"}
           </a>
         </p>
       ) : (
-        <form onSubmit={handleSave} className="marketing-week-video-form">
-          <label className="text-sm font-medium">
-            📤 URL de tu vídeo (subido a IG/TikTok/Drive)
-          </label>
-          <div className="flex gap-2 mt-1 flex-wrap">
+        <>
+          <div className="marketing-week-upload-box">
+            <span className="text-sm font-medium">
+              📁 Subir vídeo al CRM (recomendado para TikTok)
+            </span>
             <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://..."
-              className="flex-1 min-w-[200px] px-3 py-2 border rounded-lg text-sm"
-              required
+              ref={fileRef}
+              type="file"
+              accept="video/mp4,video/quicktime,video/webm"
+              onChange={handleFileUpload}
+              disabled={uploading}
+              className="mt-2 text-sm"
             />
-            <button
-              type="submit"
-              disabled={saving || !url.trim()}
-              className="btn btn-primary text-sm"
-            >
-              {saving ? "Guardando…" : "Enlazar vídeo"}
-            </button>
+            {uploading && <p className="muted text-xs">Subiendo…</p>}
           </div>
-        </form>
+
+          <form onSubmit={handleLinkUrl} className="marketing-week-video-form mt-3">
+            <label className="text-sm font-medium muted">
+              o pegar URL externa (.mp4)
+            </label>
+            <div className="flex gap-2 mt-1 flex-wrap">
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://..."
+                className="flex-1 min-w-[200px] px-3 py-2 border rounded-lg text-sm"
+              />
+              <button
+                type="submit"
+                disabled={saving || !url.trim()}
+                className="btn btn-secondary text-sm"
+              >
+                {saving ? "Guardando…" : "Enlazar URL"}
+              </button>
+            </div>
+          </form>
+        </>
       )}
-      {msg && <p className="text-xs mt-1 muted">{msg}</p>}
+      {msg && <p className="text-xs mt-2 muted">{msg}</p>}
     </div>
   );
 }

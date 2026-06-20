@@ -102,7 +102,10 @@ export default function LoginPage() {
       );
       setLoading(false);
     } else if (result?.ok) {
-      window.location.href = "/dashboard";
+      const sessionRes = await fetch("/api/auth/session");
+      const sessionData = await sessionRes.json();
+      const role = sessionData?.user?.role;
+      window.location.href = role === "MARKETING" ? "/marketing" : "/dashboard";
     }
   };
 

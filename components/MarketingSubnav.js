@@ -8,6 +8,7 @@ const ITEMS = [
   { href: "/marketing/create", label: "Crear" },
   { href: "/marketing/pending", label: "Pendientes" },
   { href: "/marketing/semana", label: "Vista domingo" },
+  { href: "/marketing/conexiones", label: "Conexiones" },
   { href: "/marketing/approved", label: "Publicar" },
   { href: "/marketing/published", label: "Historial" },
   { href: "/marketing/analytics", label: "Analítica" },

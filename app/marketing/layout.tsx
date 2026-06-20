@@ -20,10 +20,8 @@ export default async function MarketingLayout({
 
   return (
     <AppShell>
-      <div className="marketing-shell">
-        <MarketingSubnav />
-        <div className="marketing-content">{children}</div>
-      </div>
+      <MarketingSubnav />
+      {children}
     </AppShell>
   );
 }

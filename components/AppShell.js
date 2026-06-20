@@ -1,16 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { SessionProvider } from "next-auth/react";
+import { SessionProvider, useSession } from "next-auth/react";
 import Sidebar from "@/components/Sidebar";
 import GlobalSearch from "@/components/GlobalSearch";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 import NotificationBell from "@/components/NotificationBell";
 import { HamburgerButton, MobileDrawer, BottomTabBar } from "@/components/MobileNav";
 import ThemeToggle from "@/components/ThemeToggle";
+import { canAccessSalesCrm } from "@/lib/permissions";
 
-export default function AppShell({ children }) {
+function AppShellInner({ children }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { data: session } = useSession();
+  const salesAccess = canAccessSalesCrm(session);
 
   function openDrawer() {
     setDrawerOpen(true);
@@ -21,24 +24,30 @@ export default function AppShell({ children }) {
   }
 
   return (
-    <SessionProvider>
-      <div className="app-shell">
-        <Sidebar />
-        <MobileDrawer open={drawerOpen} onClose={closeDrawer} />
-        <main className="app-main">
-          <div className="app-topbar">
-            <HamburgerButton open={drawerOpen} onClick={() => setDrawerOpen((v) => !v)} />
-            <div className="app-topbar-actions">
-              <ThemeToggle compact className="theme-toggle--topbar" />
-              <NotificationBell />
-              <GlobalSearch />
-            </div>
+    <div className="app-shell">
+      <Sidebar />
+      <MobileDrawer open={drawerOpen} onClose={closeDrawer} />
+      <main className="app-main">
+        <div className="app-topbar">
+          <HamburgerButton open={drawerOpen} onClick={() => setDrawerOpen((v) => !v)} />
+          <div className="app-topbar-actions">
+            <ThemeToggle compact className="theme-toggle--topbar" />
+            {salesAccess && <NotificationBell />}
+            {salesAccess && <GlobalSearch />}
           </div>
-          {children}
-        </main>
-      </div>
+        </div>
+        {children}
+      </main>
       <BottomTabBar onMoreClick={openDrawer} />
-      <KeyboardShortcuts />
+      {salesAccess && <KeyboardShortcuts />}
+    </div>
+  );
+}
+
+export default function AppShell({ children }) {
+  return (
+    <SessionProvider>
+      <AppShellInner>{children}</AppShellInner>
     </SessionProvider>
   );
 }

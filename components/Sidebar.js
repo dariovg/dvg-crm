@@ -1,16 +1,23 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { NAV_LINKS } from "@/lib/nav-links";
-import { isStaff, canAccessMarketing } from "@/lib/permissions";
+import { getNavLinksForSession } from "@/lib/nav-links";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Sidebar() {
   const { data: session } = useSession();
+  const pathname = usePathname();
   const role = session?.user?.role;
   const isAdmin = role === "ADMIN";
   const isManager = role === "MANAGER";
-  const marketing = canAccessMarketing({ user: session?.user });
-  const staff = isStaff({ user: session?.user });
+  const navLinks = getNavLinksForSession(session);
+
+  function isActive(href) {
+    if (href === "/dashboard") return pathname === "/dashboard";
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
 
   return (
     <aside className="sidebar">
@@ -19,37 +26,23 @@ export default function Sidebar() {
         <p className="sidebar-tag">hacIA lo imparable</p>
       </div>
       <nav className="sidebar-nav">
-        {NAV_LINKS.map((l) => (
-          <Link key={l.href} href={l.href} className="sidebar-link">
+        {navLinks.map((l) => (
+          <Link
+            key={l.href}
+            href={l.href}
+            className={`sidebar-link${isActive(l.href) ? " sidebar-link--active" : ""}`}
+          >
             {l.label}
           </Link>
         ))}
-        {marketing && (
-          <Link href="/marketing" className="sidebar-link">
-            Marketing
-          </Link>
-        )}
-        {isAdmin && (
-          <>
-            <Link href="/admin/users" className="sidebar-link">
-              Equipo
-            </Link>
-            <Link href="/admin/security" className="sidebar-link">
-              Seguridad
-            </Link>
-          </>
-        )}
-        {staff && (
-          <Link href="/leads/import" className="sidebar-link">
-            Importar CSV
-          </Link>
-        )}
       </nav>
       <div className="sidebar-foot">
         <ThemeToggle className="theme-toggle--sidebar" />
-        <p className="shortcuts-hint">
-          <kbd>?</kbd> atajos · <kbd>⌘K</kbd> buscar
-        </p>
+        {role !== "MARKETING" && (
+          <p className="shortcuts-hint">
+            <kbd>?</kbd> atajos · <kbd>⌘K</kbd> buscar
+          </p>
+        )}
         {isAdmin && (
           <a href="/api/export/leads" className="sidebar-link export-link">
             Exportar CSV
@@ -59,7 +52,7 @@ export default function Sidebar() {
           <div className="sidebar-user">
             <p>{session.user.name || session.user.email}</p>
             <span
-              className={`role-badge${isAdmin ? " role-badge--admin" : isManager ? " role-badge--manager" : role === "MARKETING" ? " role-badge--manager" : ""}`}
+              className={`role-badge${isAdmin ? " role-badge--admin" : isManager ? " role-badge--manager" : role === "MARKETING" ? " role-badge--marketing" : ""}`}
             >
               {isAdmin
                 ? "Administración"

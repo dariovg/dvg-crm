@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth-options";
-import { canAccessMarketing, canApproveMarketingPosts } from "@/lib/permissions";
+import { canAccessMarketing, canApproveMarketingPosts, canAccessSalesCrm } from "@/lib/permissions";
 import { getMarketingDashboardStats } from "@/lib/marketing-stats";
 import { isTwitterConfigured } from "@/lib/social/twitter.js";
 
@@ -13,7 +13,11 @@ export default async function MarketingDashboard() {
   if (!session) redirect("/login");
   if (!canAccessMarketing(session)) redirect("/dashboard");
 
-  const stats = await getMarketingDashboardStats();
+  const showLeadLinks = canAccessSalesCrm(session);
+  const stats = await getMarketingDashboardStats({ includeLeads: showLeadLinks });
+  const newLeads24h =
+    typeof stats.newLeads24h === "number" ? stats.newLeads24h : 0;
+  const recentLeads = Array.isArray(stats.recentLeads) ? stats.recentLeads : [];
   const isAdmin = canApproveMarketingPosts(session);
   const xReady = isTwitterConfigured();
 
@@ -77,7 +81,9 @@ export default async function MarketingDashboard() {
           <div className="marketing-kpi-label">Likes (7 días)</div>
         </div>
         <div className="marketing-kpi marketing-kpi--purple">
-          <div className="marketing-kpi-value">{stats.newLeads24h}</div>
+          <div className="marketing-kpi-value">
+            {showLeadLinks ? newLeads24h : "—"}
+          </div>
           <div className="marketing-kpi-label">Leads nuevos (24h)</div>
         </div>
         <div className="marketing-kpi marketing-kpi--orange">
@@ -104,13 +110,14 @@ export default async function MarketingDashboard() {
           </Link>
         </section>
 
+        {showLeadLinks && (
         <section className="panel">
           <h2 className="panel-title">Leads recientes</h2>
-          {stats.recentLeads.length === 0 ? (
+          {recentLeads.length === 0 ? (
             <p className="muted">Sin leads nuevos.</p>
           ) : (
             <ul className="marketing-lead-list">
-              {stats.recentLeads.map((lead) => (
+              {recentLeads.map((lead) => (
                 <li key={lead.id}>
                   <Link href={`/leads/${lead.id}`}>
                     <strong>{lead.name || lead.email}</strong>
@@ -121,6 +128,7 @@ export default async function MarketingDashboard() {
             </ul>
           )}
         </section>
+        )}
       </div>
 
       {isAdmin && stats.recentApproved.length > 0 && (

@@ -35,7 +35,7 @@ export default function ApprovedPostsPage() {
       ]);
       const approved = await approvedRes.json();
       const sched = await scheduledRes.json();
-      const status = statusRes.ok ? await statusRes.json() : { twitter: false };
+      const status = statusRes.ok ? await statusRes.json() : { twitter: false, tiktok: {} };
       setReady(approved.posts || []);
       setScheduled(sched.posts || []);
       setXConfigured(!!status.twitter);
