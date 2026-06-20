@@ -3,13 +3,14 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { getHelpForPath } from "@/lib/help-content";
-import { t } from "@/lib/i18n";
+import { useLocale } from "@/components/LocaleProvider";
 
 export default function HelpButton() {
   const pathname = usePathname();
+  const { locale, t } = useLocale();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
-  const help = getHelpForPath(pathname);
+  const help = getHelpForPath(pathname, locale);
 
   useEffect(() => {
     setOpen(false);

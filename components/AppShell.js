@@ -12,6 +12,8 @@ import PageTransition from "@/components/PageTransition";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
 import HelpButton from "@/components/HelpButton";
 import UserMenu from "@/components/UserMenu";
+import LanguageToggle from "@/components/LanguageToggle";
+import LocaleProvider from "@/components/LocaleProvider";
 import { canAccessSalesCrm } from "@/lib/permissions";
 
 function AppShellInner({ children }) {
@@ -35,6 +37,7 @@ function AppShellInner({ children }) {
         <div className="app-topbar">
           <HamburgerButton open={drawerOpen} onClick={() => setDrawerOpen((v) => !v)} />
           <div className="app-topbar-actions">
+            <LanguageToggle compact className="language-toggle--topbar" />
             <HelpButton />
             <ThemeToggle compact className="theme-toggle--topbar" />
             {salesAccess && <NotificationBell />}
@@ -54,7 +57,9 @@ function AppShellInner({ children }) {
 export default function AppShell({ children }) {
   return (
     <SessionProvider>
-      <AppShellInner>{children}</AppShellInner>
+      <LocaleProvider>
+        <AppShellInner>{children}</AppShellInner>
+      </LocaleProvider>
     </SessionProvider>
   );
 }

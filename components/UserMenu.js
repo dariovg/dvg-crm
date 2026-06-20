@@ -2,12 +2,13 @@
 
 import { signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
+import { useLocale } from "@/components/LocaleProvider";
 
-function roleLabel(role) {
-  if (role === "ADMIN") return "Administración";
-  if (role === "MANAGER") return "Manager";
-  if (role === "MARKETING") return "Marketing";
-  return "Equipo";
+function roleLabel(role, t) {
+  if (role === "ADMIN") return t("role.admin");
+  if (role === "MANAGER") return t("role.manager");
+  if (role === "MARKETING") return t("role.marketing");
+  return t("role.member");
 }
 
 function initials(name, email) {
@@ -21,6 +22,7 @@ function initials(name, email) {
 
 export default function UserMenu() {
   const { data: session } = useSession();
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
 
@@ -68,7 +70,7 @@ export default function UserMenu() {
               <strong>{display}</strong>
               {email && name && <span>{email}</span>}
               <span className={`role-badge user-menu-role${role === "ADMIN" ? " role-badge--admin" : role === "MANAGER" ? " role-badge--manager" : role === "MARKETING" ? " role-badge--marketing" : ""}`}>
-                {roleLabel(role)}
+                {roleLabel(role, t)}
               </span>
             </div>
             <button
@@ -77,7 +79,7 @@ export default function UserMenu() {
               role="menuitem"
               onClick={handleSignOut}
             >
-              Cerrar sesión
+              {t("auth.signOut")}
             </button>
           </div>
         </>

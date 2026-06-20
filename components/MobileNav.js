@@ -8,6 +8,8 @@ import { canAccessSalesCrm } from "@/lib/permissions";
 import ThemeToggle from "@/components/ThemeToggle";
 import NavIcon from "@/components/NavIcon";
 import BrandLogo from "@/components/BrandLogo";
+import { useLocale } from "@/components/LocaleProvider";
+import { navLabel } from "@/lib/i18n";
 
 export function HamburgerButton({ open, onClick }) {
   return (
@@ -26,6 +28,7 @@ export function HamburgerButton({ open, onClick }) {
 export function MobileDrawer({ open, onClose }) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { locale, t } = useLocale();
   const role = session?.user?.role;
   const isAdmin = role === "ADMIN";
   const isManager = role === "MANAGER";
@@ -66,7 +69,7 @@ export function MobileDrawer({ open, onClose }) {
               onClick={handleLinkClick}
             >
               <NavIcon name={l.icon} size={20} />
-              <span>{l.label}</span>
+              <span>{navLabel(l.href, locale)}</span>
             </Link>
           ))}
         </nav>
@@ -74,7 +77,7 @@ export function MobileDrawer({ open, onClose }) {
           <ThemeToggle className="theme-toggle--sidebar" />
           {isAdmin && (
             <a href="/api/export/leads" className="mobile-drawer-link export-link" onClick={handleLinkClick}>
-              Exportar CSV
+              {t("nav.export")}
             </a>
           )}
           {session?.user && (
@@ -84,12 +87,12 @@ export function MobileDrawer({ open, onClose }) {
                 className={`role-badge${isAdmin ? " role-badge--admin" : isManager ? " role-badge--manager" : role === "MARKETING" ? " role-badge--marketing" : ""}`}
               >
                 {isAdmin
-                  ? "Administración"
+                  ? t("role.admin")
                   : isManager
-                    ? "Manager"
+                    ? t("role.manager")
                     : role === "MARKETING"
-                      ? "Marketing"
-                      : "Equipo"}
+                      ? t("role.marketing")
+                      : t("role.member")}
               </span>
               <button
                 type="button"
@@ -99,7 +102,7 @@ export function MobileDrawer({ open, onClose }) {
                   signOut({ callbackUrl: "/login" });
                 }}
               >
-                Cerrar sesión
+                {t("auth.signOut")}
               </button>
             </div>
           )}
@@ -112,6 +115,7 @@ export function MobileDrawer({ open, onClose }) {
 export function BottomTabBar({ onMoreClick }) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { locale, t } = useLocale();
   const tabLinks = getTabLinksForSession(session);
   const salesAccess = canAccessSalesCrm(session);
 
@@ -128,11 +132,11 @@ export function BottomTabBar({ onMoreClick }) {
           className={`bottom-tab${pathname.startsWith("/marketing") ? " bottom-tab--active" : ""}`}
         >
           <NavIcon name="marketing" />
-          <span>Marketing</span>
+          <span>{t("nav.marketing")}</span>
         </Link>
         <button type="button" className="bottom-tab" onClick={onMoreClick}>
           <NavIcon name="more" />
-          <span>Cuenta</span>
+          <span>{t("nav.account")}</span>
         </button>
       </nav>
     );
@@ -147,7 +151,7 @@ export function BottomTabBar({ onMoreClick }) {
           className={`bottom-tab${isActive(tab.href) ? " bottom-tab--active" : ""}`}
         >
           <NavIcon name={tab.icon} size={20} />
-          <span>{tab.short}</span>
+          <span>{tab.href === "/dashboard" ? t("nav.home") : navLabel(tab.href, locale)}</span>
         </Link>
       ))}
       <button
@@ -156,7 +160,7 @@ export function BottomTabBar({ onMoreClick }) {
         onClick={onMoreClick}
       >
         <NavIcon name="more" />
-        <span>Más</span>
+        <span>{t("nav.more")}</span>
       </button>
     </nav>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale } from "@/components/LocaleProvider";
 
 export const STORAGE_KEY = "dvg-crm-theme";
 
@@ -41,6 +42,7 @@ function MoonIcon() {
 }
 
 export default function ThemeToggle({ className = "", compact = false }) {
+  const { t } = useLocale();
   const [theme, setTheme] = useState("light");
   const [mounted, setMounted] = useState(false);
 
@@ -70,12 +72,12 @@ export default function ThemeToggle({ className = "", compact = false }) {
       type="button"
       className={`theme-toggle${compact ? " theme-toggle--compact" : ""} ${className}`.trim()}
       onClick={toggle}
-      aria-label={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-      title={isDark ? "Modo claro" : "Modo oscuro"}
+      aria-label={isDark ? t("theme.toLight") : t("theme.toDark")}
+      title={isDark ? t("theme.light") : t("theme.dark")}
     >
       {isDark ? <SunIcon /> : <MoonIcon />}
       {!compact && (
-        <span className="theme-toggle-label">{isDark ? "Modo claro" : "Modo oscuro"}</span>
+        <span className="theme-toggle-label">{isDark ? t("theme.light") : t("theme.dark")}</span>
       )}
     </button>
   );

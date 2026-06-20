@@ -3,11 +3,8 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
-import {
-  getOnboardingForRole,
-  onboardingStorageKey,
-} from "@/lib/onboarding-content";
-import { t } from "@/lib/i18n";
+import { getOnboardingForRole, onboardingStorageKey } from "@/lib/onboarding-content";
+import { useLocale } from "@/components/LocaleProvider";
 
 function readState(key) {
   try {
@@ -28,9 +25,10 @@ function writeState(key, state) {
 
 export default function OnboardingChecklist() {
   const { data: session } = useSession();
+  const { locale, t } = useLocale();
   const userId = session?.user?.id;
   const role = session?.user?.role;
-  const config = getOnboardingForRole(role);
+  const config = getOnboardingForRole(role, locale);
 
   const [visible, setVisible] = useState(false);
   const [checked, setChecked] = useState([]);
@@ -82,7 +80,7 @@ export default function OnboardingChecklist() {
         <div>
           <strong>{config.title}</strong>
           <span className="onboarding-progress">
-            {t("onboarding.progress", "es", { done, total })}
+            {t("onboarding.progress", { done, total })}
           </span>
         </div>
         <button type="button" className="btn-sm btn-ghost" onClick={dismiss}>
@@ -104,7 +102,7 @@ export default function OnboardingChecklist() {
               </label>
               {step.href && (
                 <Link href={step.href} className="onboarding-step-link">
-                  Ir →
+                  {t("common.go")}
                 </Link>
               )}
             </li>

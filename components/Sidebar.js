@@ -7,9 +7,12 @@ import { getNavLinksForSession } from "@/lib/nav-links";
 import ThemeToggle from "@/components/ThemeToggle";
 import NavIcon from "@/components/NavIcon";
 import BrandLogo from "@/components/BrandLogo";
+import { useLocale } from "@/components/LocaleProvider";
+import { navLabel } from "@/lib/i18n";
 
 export default function Sidebar() {
   const { data: session } = useSession();
+  const { locale, t } = useLocale();
   const pathname = usePathname();
   const role = session?.user?.role;
   const isAdmin = role === "ADMIN";
@@ -29,7 +32,7 @@ export default function Sidebar() {
       </div>
       <nav className="sidebar-nav" aria-label="Principal">
         {!isMarketingOnly && (
-          <span className="sidebar-nav-label">Comercial</span>
+          <span className="sidebar-nav-label">{t("sidebar.commercial")}</span>
         )}
         {navLinks.map((l) => (
           <Link
@@ -38,7 +41,7 @@ export default function Sidebar() {
             className={`sidebar-link${isActive(l.href) ? " sidebar-link--active" : ""}`}
           >
             <NavIcon name={l.icon} className="sidebar-link-icon" />
-            <span>{l.label}</span>
+            <span>{navLabel(l.href, locale)}</span>
           </Link>
         ))}
       </nav>
@@ -46,13 +49,13 @@ export default function Sidebar() {
         <ThemeToggle className="theme-toggle--sidebar" />
         {role !== "MARKETING" && (
           <p className="shortcuts-hint">
-            <kbd>?</kbd> atajos · <kbd>⌘K</kbd> buscar
+            <kbd>?</kbd> {t("sidebar.shortcuts")} · <kbd>⌘K</kbd> {t("sidebar.search")}
           </p>
         )}
         {isAdmin && (
           <a href="/api/export/leads" className="sidebar-link export-link">
             <NavIcon name="export" className="sidebar-link-icon" />
-            <span>Exportar CSV</span>
+            <span>{t("nav.export")}</span>
           </a>
         )}
         {session?.user && (
@@ -62,19 +65,19 @@ export default function Sidebar() {
               className={`role-badge${isAdmin ? " role-badge--admin" : isManager ? " role-badge--manager" : role === "MARKETING" ? " role-badge--marketing" : ""}`}
             >
               {isAdmin
-                ? "Administración"
+                ? t("role.admin")
                 : isManager
-                  ? "Manager"
+                  ? t("role.manager")
                   : role === "MARKETING"
-                    ? "Marketing"
-                    : "Equipo"}
+                    ? t("role.marketing")
+                    : t("role.member")}
             </span>
             <button
               type="button"
               className="sidebar-signout-btn"
               onClick={() => signOut({ callbackUrl: "/login" })}
             >
-              Cerrar sesión
+              {t("auth.signOut")}
             </button>
           </div>
         )}

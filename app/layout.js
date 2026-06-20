@@ -18,7 +18,7 @@ export default function RootLayout({ children }) {
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("dvg-crm-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem("dvg-crm-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);var l=localStorage.getItem("dvg-crm-locale");if(l==="en"||l==="es")document.documentElement.setAttribute("lang",l)}catch(e){}})();`,
           }}
         />
       </head>

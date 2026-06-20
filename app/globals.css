@@ -2465,6 +2465,43 @@ body {
   color: #fff;
 }
 .theme-toggle--topbar { flex-shrink: 0; }
+
+.language-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--card-bg);
+}
+.language-toggle-btn {
+  border: none;
+  background: transparent;
+  color: var(--gray);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .03em;
+  padding: .35rem .5rem;
+  border-radius: 7px;
+  cursor: pointer;
+  min-width: 34px;
+  min-height: 34px;
+}
+.language-toggle-btn--active {
+  background: var(--orange);
+  color: #fff;
+}
+.language-toggle-btn:hover:not(.language-toggle-btn--active) {
+  color: var(--navy);
+  background: var(--card-bg-muted);
+}
+.language-toggle--topbar { flex-shrink: 0; }
+.language-toggle--compact .language-toggle-btn {
+  min-width: 32px;
+  min-height: 32px;
+  padding: .3rem .45rem;
+}
 .login-theme-toggle {
   position: fixed;
   top: max(1rem, env(safe-area-inset-top));
