@@ -2,6 +2,8 @@ import Link from "next/link";
 import StatusBadge from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
 import TaskRemindersBanner from "@/components/TaskRemindersBanner";
+import InactivityBanner from "@/components/InactivityBanner";
+import RecentActivityFeed from "@/components/RecentActivityFeed";
 import Accordion from "@/components/Accordion";
 
 export default function DashboardView({
@@ -14,6 +16,9 @@ export default function DashboardView({
   weekly,
   stageDurations,
   taskReminders,
+  recentActivity,
+  inactiveLeads,
+  inactivityDays,
 }) {
   const maxPipeline = Math.max(...stats.byStatus.map((s) => s.count), 1);
   const maxFunnel = Math.max(...funnel.map((f) => f.count), 1);
@@ -86,6 +91,10 @@ export default function DashboardView({
         />
       )}
 
+      {inactiveLeads?.length > 0 && (
+        <InactivityBanner leads={inactiveLeads} thresholdDays={inactivityDays} />
+      )}
+
       <div className="dash-kpis dash-kpis--primary">
         <div className="dash-kpi dash-kpi--accent">
           <span className="dash-kpi-value">{stats.total}</span>
@@ -144,28 +153,35 @@ export default function DashboardView({
         </div>
       )}
 
-      <div className="card dash-recent">
-        <h2>Últimos leads</h2>
-        <ul className="dash-recent-list">
-          {recent.map((c) => (
-            <li key={c.id}>
-              <Link href={`/leads/${c.id}`}>
-                <strong>{c.name}</strong>
-                <span>{c.email}</span>
-              </Link>
-              <StatusBadge status={c.status} />
-            </li>
-          ))}
-        </ul>
-        {!recent.length && (
-          <EmptyState
-            icon="leads"
-            title="Sin actividad reciente"
-            description="Los leads nuevos aparecerán aquí."
-            actionLabel="Ver leads"
-            actionHref="/leads"
-          />
-        )}
+      <div className="dash-grid dash-grid--activity">
+        <div className="card dash-recent">
+          <h2>Últimos leads</h2>
+          <ul className="dash-recent-list">
+            {recent.map((c) => (
+              <li key={c.id}>
+                <Link href={`/leads/${c.id}`}>
+                  <strong>{c.name}</strong>
+                  <span>{c.email}</span>
+                </Link>
+                <StatusBadge status={c.status} />
+              </li>
+            ))}
+          </ul>
+          {!recent.length && (
+            <EmptyState
+              icon="leads"
+              title="Sin actividad reciente"
+              description="Los leads nuevos aparecerán aquí."
+              actionLabel="Ver leads"
+              actionHref="/leads"
+            />
+          )}
+        </div>
+
+        <div className="card dash-activity">
+          <h2>Actividad reciente</h2>
+          <RecentActivityFeed items={recentActivity} />
+        </div>
       </div>
 
       <Accordion

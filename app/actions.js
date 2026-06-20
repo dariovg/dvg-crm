@@ -19,7 +19,9 @@ import {
   isStaff,
   quoteScope,
 } from "@/lib/permissions";
-import { notifyAssignment } from "@/lib/mail";
+import { notifyAssignment, sendMail, isMailConfigured } from "@/lib/mail";
+import { saveCrmSettings as persistCrmSettings, getScoringRules } from "@/lib/crm-settings";
+import { withLeadScores } from "@/lib/lead-score";
 import { pushNotification } from "@/lib/notifications";
 import { generateTotpSecret, getTotpUri, verifyTotpToken } from "@/lib/totp";
 import {
@@ -313,6 +315,16 @@ export async function createTask(
     },
   });
 
+  await prisma.contactEvent.create({
+    data: {
+      contactId,
+      type: "task_created",
+      summary: title,
+      payload: { taskId: task.id },
+      userId: actorId(session),
+    },
+  });
+
   if (targetAssignee && targetAssignee !== actorId(session)) {
     const assignee = await prisma.user.findUnique({
       where: { id: targetAssignee },
@@ -322,6 +334,7 @@ export async function createTask(
 
   revalidatePath("/tasks");
   revalidatePath("/calendar");
+  revalidatePath("/dashboard");
   revalidatePath(`/leads/${contactId}`);
   return task;
 }
@@ -330,16 +343,29 @@ export async function toggleTask(taskId, done) {
   const session = await requireAuthSession();
   const task = await prisma.task.findUnique({ where: { id: taskId } });
   if (!task || !canAccessTask(session, task)) throw new Error("No autorizado");
+  const wasDone = task.done;
   await prisma.task.update({
     where: { id: taskId },
     data: { done },
   });
+  if (done && !wasDone) {
+    await prisma.contactEvent.create({
+      data: {
+        contactId: task.contactId,
+        type: "task_completed",
+        summary: task.title,
+        payload: { taskId: task.id },
+        userId: actorId(session),
+      },
+    });
+  }
   if (done && task.recurDays) {
     await spawnRecurringTask(task);
   }
   revalidatePath("/tasks");
   revalidatePath("/calendar");
   revalidatePath("/dashboard");
+  revalidatePath(`/leads/${task.contactId}`);
 }
 
 export async function updateTask(taskId, { title, dueAt, assigneeId, done, priority, recurDays }) {
@@ -359,7 +385,20 @@ export async function updateTask(taskId, { title, dueAt, assigneeId, done, prior
     data.assigneeId = assigneeId || null;
   }
 
+  const wasDone = task.done;
   await prisma.task.update({ where: { id: taskId }, data });
+
+  if (done === true && !wasDone) {
+    await prisma.contactEvent.create({
+      data: {
+        contactId: task.contactId,
+        type: "task_completed",
+        summary: title || task.title,
+        payload: { taskId: task.id },
+        userId: actorId(session),
+      },
+    });
+  }
 
   if (isStaff(session) && assigneeId && assigneeId !== task.assigneeId) {
     const assignee = await prisma.user.findUnique({ where: { id: assigneeId } });
@@ -374,6 +413,7 @@ export async function updateTask(taskId, { title, dueAt, assigneeId, done, prior
 
   revalidatePath("/tasks");
   revalidatePath("/calendar");
+  revalidatePath("/dashboard");
   revalidatePath(`/leads/${task.contactId}`);
 }
 
@@ -403,14 +443,69 @@ export async function fetchScopedContacts(filters = {}) {
     ];
   }
 
-  return prisma.contact.findMany({
+  const rules = await getScoringRules();
+  const contacts = await prisma.contact.findMany({
     where,
     orderBy: { createdAt: "desc" },
     include: {
       assignee: { select: { id: true, email: true, name: true, role: true } },
       meetings: { orderBy: { createdAt: "desc" }, take: 1 },
+      quotes: { select: { id: true }, take: 1 },
+      surveys: { orderBy: { createdAt: "desc" }, take: 1, select: { score: true } },
+      events: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
+      tasks: { orderBy: { updatedAt: "desc" }, take: 1, select: { updatedAt: true, createdAt: true } },
     },
   });
+  return withLeadScores(contacts, rules);
+}
+
+export async function sendLeadEmail(contactId, { subject, body }) {
+  const session = await requireAuthSession();
+  const contact = await getContactForUser(session, contactId);
+
+  if (!isMailConfigured()) {
+    return { ok: false, error: "SMTP no configurado (CRM_SMTP_*)." };
+  }
+
+  const trimmedSubject = subject?.trim();
+  const trimmedBody = body?.trim();
+  if (!trimmedSubject || !trimmedBody) {
+    return { ok: false, error: "Asunto y mensaje obligatorios." };
+  }
+
+  const sent = await sendMail({
+    to: contact.email,
+    subject: trimmedSubject,
+    text: trimmedBody,
+    html: trimmedBody.replace(/\n/g, "<br>"),
+  });
+
+  if (!sent) {
+    return { ok: false, error: "No se pudo enviar el email." };
+  }
+
+  await prisma.contactEvent.create({
+    data: {
+      contactId,
+      type: "email_sent",
+      summary: trimmedSubject,
+      payload: { to: contact.email },
+      userId: actorId(session),
+    },
+  });
+
+  revalidatePath(`/leads/${contactId}`);
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export async function saveCrmSettings(settings) {
+  await requireAdminSession();
+  await persistCrmSettings(settings);
+  revalidatePath("/admin/crm-settings");
+  revalidatePath("/dashboard");
+  revalidatePath("/leads");
+  revalidatePath("/pipeline");
 }
 
 export async function globalSearch(query) {

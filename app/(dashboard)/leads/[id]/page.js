@@ -12,6 +12,9 @@ import LeadTimeline from "@/components/LeadTimeline";
 import { SOURCE_LABEL } from "@/lib/constants";
 import { getAuthSession, listTeamUsers } from "@/lib/auth-server";
 import { canAccessContact, canAssignContacts, isAdmin, isStaff } from "@/lib/permissions";
+import { isMailConfigured } from "@/lib/mail";
+import { getScoringRules } from "@/lib/crm-settings";
+import { computeLeadScore } from "@/lib/lead-score";
 
 export default async function LeadDetailPage({ params }) {
   const { id } = await params;
@@ -45,6 +48,10 @@ export default async function LeadDetailPage({ params }) {
 
   if (!contact || !canAccessContact(session, contact)) notFound();
 
+  const scoringRules = await getScoringRules();
+  const leadScore = computeLeadScore(contact, scoringRules);
+  const mailEnabled = isMailConfigured();
+
   const team = canAssign ? await listTeamUsers() : [];
 
   return (
@@ -58,15 +65,15 @@ export default async function LeadDetailPage({ params }) {
             · <AssigneeBadge user={contact.assignee} />
           </>
         )}
-        {contact.leadScore != null && (
+        {leadScore != null && (
           <>
             {" "}
-            · <LeadScoreBadge score={contact.leadScore} />
+            · <LeadScoreBadge score={leadScore} />
           </>
         )}
       </p>
 
-      <ContactQuickActions contact={contact} />
+      <ContactQuickActions contact={contact} mailEnabled={mailEnabled} />
 
       <div className="detail-grid">
         <div>

@@ -3,6 +3,10 @@ import { CONTACT_STATUSES, FUNNEL_STAGES } from "@/lib/constants";
 import { getAuthSession, listTeamUsers } from "@/lib/auth-server";
 import { contactScope, taskScope, isStaff } from "@/lib/permissions";
 import { computeStageDurations, taskDueStatus } from "@/lib/crm-utils";
+import { buildActivityFeed } from "@/lib/lead-timeline";
+import { getCrmSettings } from "@/lib/crm-settings";
+import { getInactiveLeads } from "@/lib/inactivity";
+import { withLeadScores } from "@/lib/lead-score";
 import DashboardView from "@/components/DashboardView";
 
 export default async function DashboardPage() {
@@ -11,6 +15,7 @@ export default async function DashboardPage() {
   const staff = isStaff(session);
   const taskWhere = { ...taskScope(session), done: false };
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const { inactivityDays, scoringRules } = await getCrmSettings();
 
   const [
     total,
@@ -26,6 +31,8 @@ export default async function DashboardPage() {
     teamUsers,
     statusEvents,
     openTasks,
+    activityContacts,
+    inactiveLeads,
   ] = await Promise.all([
     prisma.contact.count({ where: scope }),
     prisma.contact.groupBy({
@@ -77,6 +84,28 @@ export default async function DashboardPage() {
       where: taskWhere,
       select: { dueAt: true, done: true },
     }),
+    prisma.contact.findMany({
+      where: scope,
+      orderBy: { updatedAt: "desc" },
+      take: 25,
+      include: {
+        createdBy: { select: { name: true } },
+        events: {
+          orderBy: { createdAt: "desc" },
+          take: 8,
+          include: { user: { select: { name: true } } },
+        },
+        meetings: { orderBy: { createdAt: "desc" }, take: 2 },
+        tasks: {
+          orderBy: { createdAt: "desc" },
+          take: 3,
+          include: { assignee: { select: { name: true } } },
+        },
+        surveys: { orderBy: { createdAt: "desc" }, take: 1 },
+        quotes: { orderBy: { createdAt: "desc" }, take: 3, select: { id: true, number: true, createdAt: true } },
+      },
+    }),
+    getInactiveLeads(prisma, scope, inactivityDays),
   ]);
 
   const counts = Object.fromEntries(
@@ -121,6 +150,9 @@ export default async function DashboardPage() {
     if (s === "today") dueToday++;
   }
 
+  const recentActivity = buildActivityFeed(activityContacts, 4).slice(0, 12);
+  const recentWithScores = withLeadScores(recent, scoringRules);
+
   const stats = {
     total,
     newCount: counts.NEW || 0,
@@ -138,7 +170,7 @@ export default async function DashboardPage() {
   return (
     <DashboardView
       stats={stats}
-      recent={recent}
+      recent={recentWithScores}
       isStaff={staff}
       teamCount={team.length}
       memberStats={memberStats}
@@ -150,6 +182,9 @@ export default async function DashboardPage() {
       }}
       stageDurations={stageDurations}
       taskReminders={{ overdue, dueToday }}
+      recentActivity={recentActivity}
+      inactiveLeads={inactiveLeads}
+      inactivityDays={inactivityDays}
     />
   );
 }

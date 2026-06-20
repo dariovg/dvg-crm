@@ -972,6 +972,118 @@ body {
 .timeline-kind--meeting { background: #d1fae5; color: #065f46; }
 .timeline-kind--assign { background: #fce7f3; color: #9d174d; }
 .timeline-kind--survey { background: #ede9fe; color: #5b21b6; }
+.timeline-kind--email { background: #ffedd5; color: #c2410c; }
+.timeline-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  margin-bottom: .85rem;
+}
+.timeline-filter {
+  border: 1px solid var(--border-strong);
+  background: var(--card-bg);
+  color: var(--text-muted);
+  font-size: .72rem;
+  font-weight: 700;
+  padding: .25rem .55rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.timeline-filter--active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+.timeline-filter-empty {
+  font-size: .88rem;
+  color: var(--gray);
+  margin: 0;
+}
+.dash-grid--activity {
+  margin-bottom: 1rem;
+}
+.dash-activity h2 { margin: 0 0 1rem; font-size: 1rem; }
+.activity-feed {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+.activity-feed-item {
+  padding-bottom: .75rem;
+  border-bottom: 1px solid var(--border);
+}
+.activity-feed-item:last-child { border-bottom: none; padding-bottom: 0; }
+.activity-feed-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: .25rem;
+}
+.activity-feed-head time {
+  font-size: .72rem;
+  color: var(--gray);
+}
+.activity-feed-lead {
+  font-weight: 700;
+  font-size: .88rem;
+  color: var(--primary);
+  text-decoration: none;
+}
+.activity-feed-title { font-size: .85rem; font-weight: 600; }
+.activity-feed-summary {
+  font-size: .82rem;
+  color: var(--text-muted);
+}
+.activity-feed-empty {
+  font-size: .88rem;
+  color: var(--gray);
+  margin: 0;
+}
+.reminder-banner--inactivity {
+  background: #fefce8;
+  border-color: #fde047;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.inactivity-list {
+  list-style: none;
+  padding: 0;
+  margin: .35rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1rem;
+  font-size: .85rem;
+}
+.inactivity-list a { color: var(--navy); font-weight: 600; text-decoration: none; }
+.inactivity-days {
+  margin-left: .35rem;
+  color: var(--gray);
+  font-size: .78rem;
+}
+.contact-email-wrap { display: contents; }
+.contact-email-form {
+  width: 100%;
+  margin-top: .75rem;
+}
+.contact-email-form h3 { margin: 0 0 .5rem; font-size: 1rem; }
+.contact-email-to { font-size: .85rem; margin: 0 0 .75rem; color: var(--gray); }
+.form-success { color: #15803d; font-size: .85rem; }
+.crm-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
+.field--narrow { max-width: 12rem; }
+.crm-settings-form h2 {
+  font-size: 1rem;
+  margin: 1.25rem 0 .75rem;
+}
+.crm-settings-form h2:first-child { margin-top: 0; }
 .timeline-entry-title {
   font-weight: 600;
   font-size: .9rem;
@@ -1492,7 +1604,12 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: .5rem;
+}
+.quick-actions-bar {
   margin-bottom: 1.25rem;
+}
+.quick-actions-bar .contact-email-form {
+  margin-top: .75rem;
 }
 .btn-quick {
   display: inline-block;

@@ -2,19 +2,28 @@ import { prisma } from "@/lib/prisma";
 import { CONTACT_STATUSES } from "@/lib/constants";
 import { getAuthSession } from "@/lib/auth-server";
 import { contactScope, isStaff } from "@/lib/permissions";
+import { getScoringRules } from "@/lib/crm-settings";
+import { withLeadScores } from "@/lib/lead-score";
 import PipelineBoard from "@/components/PipelineBoard";
 
 export default async function PipelinePage() {
   const session = await getAuthSession();
   const scope = contactScope(session);
+  const scoringRules = await getScoringRules();
 
-  const contacts = await prisma.contact.findMany({
+  const rawContacts = await prisma.contact.findMany({
     where: scope,
     orderBy: { updatedAt: "desc" },
     include: {
       assignee: { select: { id: true, email: true, name: true, role: true } },
+      meetings: { select: { id: true }, take: 1 },
+      quotes: { select: { id: true }, take: 1 },
+      surveys: { orderBy: { createdAt: "desc" }, take: 1, select: { score: true } },
+      events: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
+      tasks: { orderBy: { updatedAt: "desc" }, take: 1, select: { updatedAt: true, createdAt: true } },
     },
   });
+  const contacts = withLeadScores(rawContacts, scoringRules);
 
   const columns = CONTACT_STATUSES.filter((s) => s.id !== "LOST").map((s) => ({
     ...s,
