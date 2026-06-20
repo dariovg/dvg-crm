@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useState } from "react";
 import {
   beginTotpSetup,
@@ -8,8 +9,9 @@ import {
   disableTotp,
 } from "@/app/actions";
 
-export default function TwoFactorSetup({ enabled }) {
+export default function TwoFactorSetup({ enabled, mandatory = false }) {
   const router = useRouter();
+  const { update } = useSession();
   const [secret, setSecret] = useState(null);
   const [uri, setUri] = useState("");
   const [code, setCode] = useState("");
@@ -19,9 +21,13 @@ export default function TwoFactorSetup({ enabled }) {
   async function start() {
     setPending(true);
     setError("");
-    const data = await beginTotpSetup();
-    setSecret(data.secret);
-    setUri(data.uri);
+    try {
+      const data = await beginTotpSetup();
+      setSecret(data.secret);
+      setUri(data.uri);
+    } catch (err) {
+      setError(err.message || "No se pudo iniciar la configuración");
+    }
     setPending(false);
   }
 
@@ -31,6 +37,7 @@ export default function TwoFactorSetup({ enabled }) {
     setError("");
     try {
       await confirmTotpSetup(code);
+      await update();
       setSecret(null);
       router.refresh();
     } catch (err) {
@@ -41,8 +48,13 @@ export default function TwoFactorSetup({ enabled }) {
 
   async function turnOff() {
     if (!confirm("¿Desactivar 2FA?")) return;
-    await disableTotp();
-    router.refresh();
+    try {
+      await disableTotp();
+      await update();
+      router.refresh();
+    } catch (err) {
+      setError(err.message || "No se pudo desactivar 2FA");
+    }
   }
 
   if (enabled) {
@@ -50,9 +62,15 @@ export default function TwoFactorSetup({ enabled }) {
       <div className="card">
         <h2>Autenticación en dos pasos</h2>
         <p className="alert-success">2FA activo en tu cuenta admin.</p>
-        <button type="button" className="btn-sm btn-danger" onClick={turnOff}>
-          Desactivar 2FA
-        </button>
+        {mandatory ? (
+          <p className="page-lead">
+            Obligatorio para administradores. No se puede desactivar.
+          </p>
+        ) : (
+          <button type="button" className="btn-sm btn-danger" onClick={turnOff}>
+            Desactivar 2FA
+          </button>
+        )}
       </div>
     );
   }
@@ -60,7 +78,13 @@ export default function TwoFactorSetup({ enabled }) {
   return (
     <div className="card">
       <h2>Autenticación en dos pasos</h2>
-      <p>Protege el acceso admin con Google Authenticator o similar.</p>
+      {mandatory ? (
+        <p className="alert-warning">
+          Debes activar 2FA para usar el CRM como administrador.
+        </p>
+      ) : (
+        <p>Protege el acceso admin con Google Authenticator o similar.</p>
+      )}
       {!secret ? (
         <button type="button" className="btn-primary" onClick={start} disabled={pending}>
           Configurar 2FA
@@ -92,6 +116,7 @@ export default function TwoFactorSetup({ enabled }) {
           </button>
         </form>
       )}
+      {!secret && error && <p className="form-error">{error}</p>}
     </div>
   );
 }

@@ -1661,6 +1661,42 @@ body {
   color: #166534;
   margin-bottom: 1rem;
 }
+.alert-warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  padding: .65rem;
+  border-radius: 8px;
+  color: #92400e;
+  margin-bottom: 1rem;
+}
+.session-group {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.session-group-head {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-bottom: .75rem;
+}
+.session-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.session-list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.session-list li:last-child { border-bottom: none; }
+.session-list p { margin: 0; }
+.session-list .muted { font-size: .82rem; margin-top: .25rem; }
 .totp-secret {
   display: block;
   margin-top: .5rem;
@@ -2386,6 +2422,12 @@ body {
   background: rgba(34, 197, 94, 0.12);
   border-color: rgba(34, 197, 94, 0.35);
   color: #86efac;
+}
+
+[data-theme="dark"] .alert-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fcd34d;
 }
 
 [data-theme="dark"] .reminder-banner {

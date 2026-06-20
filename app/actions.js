@@ -34,6 +34,12 @@ import {
 import { planById } from "@/lib/pricing-catalog";
 import { buildLinesFromTemplate, templateById } from "@/lib/quote-templates";
 import { generateShareToken } from "@/lib/quote-share";
+import { recordAudit } from "@/lib/audit";
+import {
+  listActiveSessions,
+  revokeAllUserSessions,
+  revokeSession,
+} from "@/lib/session-tracker";
 
 function appUrl() {
   return (
@@ -181,6 +187,17 @@ export async function updateContactStatus(contactId, status, lostReason) {
           : `Estado cambiado a ${status}`,
       userId: actorId(session),
     },
+  });
+  await recordAudit({
+    userId: actorId(session),
+    action: "contact.status_changed",
+    entityType: "contact",
+    entityId: contactId,
+    summary:
+      status === "LOST"
+        ? `Lead perdido: ${lostReason.trim()}`
+        : `Estado del lead → ${status}`,
+    payload: { status, lostReason: status === "LOST" ? lostReason.trim() : null },
   });
   revalidatePath("/leads");
   revalidatePath("/pipeline");
@@ -545,7 +562,7 @@ export async function globalSearch(query) {
 }
 
 export async function createTeamUser({ email, name, password, role }) {
-  await requireAdminSession();
+  const session = await requireAdminSession();
   const normalized = email.trim().toLowerCase();
   if (!normalized || !password) throw new Error("Email y contraseña obligatorios");
   if (!["MEMBER", "MANAGER", "MARKETING"].includes(role)) throw new Error("Rol no válido");
@@ -561,11 +578,24 @@ export async function createTeamUser({ email, name, password, role }) {
       role,
     },
   });
+  await recordAudit({
+    userId: actorId(session),
+    action: "user.created",
+    entityType: "user",
+    summary: `Usuario creado: ${normalized} (${role})`,
+    payload: { email: normalized, role },
+  });
   revalidatePath("/admin/users");
 }
 
 export async function updateTeamUser(userId, { name, role }) {
-  await requireAdminSession();
+  const session = await requireAdminSession();
+  const before = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, email: true, name: true },
+  });
+  if (!before) throw new Error("Usuario no encontrado");
+
   const data = {};
   if (name?.trim()) data.name = name.trim();
   if (role) {
@@ -577,6 +607,16 @@ export async function updateTeamUser(userId, { name, role }) {
   if (!Object.keys(data).length) return;
 
   await prisma.user.update({ where: { id: userId }, data });
+  if (role && role !== before.role) {
+    await recordAudit({
+      userId: actorId(session),
+      action: "user.role_changed",
+      entityType: "user",
+      entityId: userId,
+      summary: `Rol de ${before.email}: ${before.role} → ${role}`,
+      payload: { from: before.role, to: role },
+    });
+  }
   revalidatePath("/admin/users");
 }
 
@@ -717,16 +757,78 @@ export async function confirmTotpSetup(code) {
     where: { id: user.id },
     data: { totpEnabled: true },
   });
+  await recordAudit({
+    userId: user.id,
+    action: "security.2fa_enabled",
+    entityType: "user",
+    entityId: user.id,
+    summary: "2FA activado",
+  });
   revalidatePath("/admin/security");
 }
 
 export async function disableTotp() {
   const session = await requireAdminSession();
+  if (session.user.role === "ADMIN") {
+    throw new Error("2FA es obligatorio para administradores");
+  }
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { totpEnabled: false, totpSecret: null },
+    data: { totpEnabled: false, totpSecret: null, totpBackupCodes: [] },
+  });
+  await recordAudit({
+    userId: session.user.id,
+    action: "security.2fa_disabled",
+    entityType: "user",
+    entityId: session.user.id,
+    summary: "2FA desactivado",
   });
   revalidatePath("/admin/security");
+}
+
+export async function fetchActiveSessions() {
+  await requireAdminSession();
+  return listActiveSessions();
+}
+
+export async function revokeActiveSession(sessionId) {
+  const session = await requireAdminSession();
+  const result = await revokeSession(sessionId, session.user.id);
+  if (!result) throw new Error("Sesión no encontrada");
+
+  await recordAudit({
+    userId: session.user.id,
+    action: "session.revoked",
+    entityType: "session",
+    entityId: sessionId,
+    summary: `Sesión cerrada remotamente (${result.session.user?.email || result.session.userId})`,
+  });
+
+  revalidatePath("/admin/security");
+  return { ok: true };
+}
+
+export async function revokeAllSessions(userId, keepCurrent = false) {
+  const session = await requireAdminSession();
+  const targetUserId = userId || session.user.id;
+  const exceptSessionId =
+    keepCurrent && targetUserId === session.user.id
+      ? session.user.sessionId
+      : undefined;
+
+  const count = await revokeAllUserSessions(targetUserId, exceptSessionId);
+
+  await recordAudit({
+    userId: session.user.id,
+    action: "session.revoked_all",
+    entityType: "user",
+    entityId: targetUserId,
+    summary: `Cerradas ${count} sesión(es) activas`,
+    payload: { keepCurrent: !!exceptSessionId },
+  });
+
+  revalidatePath("/admin/security");
+  return { ok: true, count };
 }
 
 // ——— Presupuestos ———
@@ -977,6 +1079,14 @@ export async function approveQuote(quoteId) {
     },
   });
 
+  await recordAudit({
+    userId: actorId(session),
+    action: "quote.approved",
+    entityType: "quote",
+    entityId: quoteId,
+    summary: `Presupuesto ${quote.number} aprobado`,
+  });
+
   if (quote.createdById) {
     await pushNotification(quote.createdById, {
       type: "quote_approved",
@@ -1009,6 +1119,15 @@ export async function rejectQuote(quoteId, note) {
       status: "REJECTED",
       approvalNote: note?.trim() || "Rechazado por administración",
     },
+  });
+
+  await recordAudit({
+    userId: actorId(session),
+    action: "quote.rejected",
+    entityType: "quote",
+    entityId: quoteId,
+    summary: `Presupuesto ${quote.number} rechazado`,
+    payload: { note: note?.trim() || null },
   });
 
   if (quote.createdById) {
@@ -1065,6 +1184,14 @@ export async function markQuoteSent(quoteId) {
       summary: `Presupuesto ${quote.number} enviado`,
       userId: actorId(session),
     },
+  });
+
+  await recordAudit({
+    userId: actorId(session),
+    action: "quote.sent",
+    entityType: "quote",
+    entityId: quoteId,
+    summary: `Presupuesto ${quote.number} enviado al cliente`,
   });
 
   revalidateQuotePaths(quoteId, quote.contactId);

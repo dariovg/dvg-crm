@@ -75,6 +75,8 @@ model User {
   lastLoginAt          DateTime?
   totpSecret           String?
   totpEnabled          Boolean   @default(false)
+  totpBackupCodes      String[]  @default([])
+  tokenVersion         Int       @default(0)
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   tasks                Task[]    @relation("TaskAssignee")
@@ -89,6 +91,40 @@ model User {
   campaignsCreated     Campaign[]   @relation("CampaignCreator")
   postsApproved        PostApproval[] @relation("PostApproval")
   marketingTemplates   MarketingTemplate[] @relation("MarketingTemplateCreator")
+  auditLogs            AuditLog[]
+  sessions             UserSession[]
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String?
+  entityId   String?
+  summary    String
+  payload    Json?
+  ipHash     String?
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([action])
+}
+
+model UserSession {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent  String?
+  ipHash     String?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime?
+
+  @@index([userId])
+  @@index([revokedAt])
+  @@index([createdAt])
 }
 
 model AppSetting {
