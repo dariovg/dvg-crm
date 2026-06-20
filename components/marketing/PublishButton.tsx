@@ -31,7 +31,11 @@ export default function PublishButton({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Error al publicar");
+        const detail =
+          data.permanent === false && data.attempts
+            ? ` (intento ${data.attempts}/3, se reintentará)`
+            : "";
+        throw new Error((data.error || "Error al publicar") + detail);
       }
 
       if (data.url) setUrl(data.url);

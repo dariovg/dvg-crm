@@ -20,6 +20,8 @@ interface SocialPostCardProps {
     createdAt: string;
     publishedAt?: string | null;
     scheduledAt?: string | null;
+    errorMessage?: string | null;
+    publishAttempts?: number;
     imageUrl?: string;
     mediaUrls?: string[];
     createdBy?: { name: string; email?: string } | null;
@@ -151,6 +153,18 @@ export default function SocialPostCard({
             <p className="text-sm text-purple-700 mb-2">
               📅 Programado:{" "}
               {new Date(post.scheduledAt).toLocaleString("es-ES")}
+            </p>
+          )}
+
+          {post.errorMessage && (
+            <p className="text-sm text-red-700 mb-2 bg-red-50 rounded p-2">
+              ⚠️ {post.errorMessage}
+              {(post.publishAttempts ?? 0) > 0 && (
+                <span className="block text-xs mt-1 text-red-600">
+                  Intento {post.publishAttempts}/3
+                  {post.status !== "FAILED" ? " — se reintentará automáticamente" : ""}
+                </span>
+              )}
             </p>
           )}
 

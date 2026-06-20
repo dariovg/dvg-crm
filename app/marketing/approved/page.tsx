@@ -15,6 +15,8 @@ interface Post {
   status: string;
   scheduledAt?: string | null;
   createdAt: string;
+  errorMessage?: string | null;
+  publishAttempts?: number;
   createdBy?: { name: string } | null;
   campaign?: { name: string };
 }
@@ -24,22 +26,26 @@ export default function ApprovedPostsPage() {
   const isAdmin = session?.user?.role === "ADMIN";
   const [ready, setReady] = useState<Post[]>([]);
   const [scheduled, setScheduled] = useState<Post[]>([]);
+  const [failed, setFailed] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [xConfigured, setXConfigured] = useState(false);
 
   async function load() {
     setLoading(true);
     try {
-      const [approvedRes, scheduledRes, statusRes] = await Promise.all([
+      const [approvedRes, scheduledRes, failedRes, statusRes] = await Promise.all([
         fetch("/api/marketing/posts?status=APPROVED"),
         fetch("/api/marketing/posts?status=SCHEDULED"),
+        fetch("/api/marketing/posts?status=FAILED"),
         fetch("/api/marketing/status"),
       ]);
       const approved = await approvedRes.json();
       const sched = await scheduledRes.json();
+      const fail = await failedRes.json();
       const status = statusRes.ok ? await statusRes.json() : { twitter: false, tiktok: {} };
       setReady(approved.posts || []);
       setScheduled(sched.posts || []);
+      setFailed(fail.posts || []);
       setXConfigured(!!status.twitter);
     } finally {
       setLoading(false);
@@ -53,6 +59,7 @@ export default function ApprovedPostsPage() {
   function removePost(id: string) {
     setReady((prev) => prev.filter((p) => p.id !== id));
     setScheduled((prev) => prev.filter((p) => p.id !== id));
+    setFailed((prev) => prev.filter((p) => p.id !== id));
   }
 
   if (loading) {
@@ -119,7 +126,7 @@ export default function ApprovedPostsPage() {
         <section className="marketing-section">
           <h2 className="panel-title">Programados ({scheduled.length})</h2>
           <p className="muted" style={{ marginBottom: "1rem" }}>
-            Se publicarán solos cuando llegue la hora (cron cada hora).
+            Se publicarán solos cuando llegue la hora (cron cada hora, con reintentos automáticos).
           </p>
           <div className="marketing-post-list">
             {scheduled.map((post) => (
@@ -132,6 +139,31 @@ export default function ApprovedPostsPage() {
                   </p>
                 )}
                 {isAdmin && xConfigured && (
+                  <div className="marketing-approval-actions">
+                    <PublishButton
+                      postId={post.id}
+                      platform={post.platform}
+                      onPublished={() => removePost(post.id)}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {failed.length > 0 && (
+        <section className="marketing-section">
+          <h2 className="panel-title">Fallos de publicación ({failed.length})</h2>
+          <p className="muted" style={{ marginBottom: "1rem" }}>
+            Tras 3 intentos fallidos el post queda en error. Puedes volver a publicar manualmente.
+          </p>
+          <div className="marketing-post-list">
+            {failed.map((post) => (
+              <div key={post.id} className="panel">
+                <SocialPostCard post={post} />
+                {isAdmin && (
                   <div className="marketing-approval-actions">
                     <PublishButton
                       postId={post.id}

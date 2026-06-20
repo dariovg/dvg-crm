@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
-import { publishSocialPost, isPlatformReadyToPublish } from "@/lib/social/publish.js";
+import { publishSocialPost, isPlatformReadyToPublish, recordPublishFailure } from "@/lib/social/publish.js";
 import { pickVideoUrl } from "@/lib/social/tiktok.js";
 
 export async function POST(
@@ -10,6 +10,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: postId } = await params;
+  let post = null;
 
   try {
     const session = await getServerSession(authOptions);
@@ -21,7 +22,7 @@ export async function POST(
       return NextResponse.json({ error: "Solo administración" }, { status: 403 });
     }
 
-    const post = await prisma.socialPost.findUnique({ where: { id: postId } });
+    post = await prisma.socialPost.findUnique({ where: { id: postId } });
     if (!post) {
       return NextResponse.json({ error: "Post no encontrado" }, { status: 404 });
     }
@@ -45,6 +46,18 @@ export async function POST(
         },
         { status: 400 }
       );
+    }
+
+    if (post.status === "FAILED") {
+      post = await prisma.socialPost.update({
+        where: { id: postId },
+        data: {
+          status: "APPROVED",
+          publishAttempts: 0,
+          lastPublishAttemptAt: null,
+          errorMessage: null,
+        },
+      });
     }
 
     const updated = await publishSocialPost(post);
@@ -72,15 +85,20 @@ export async function POST(
     const message =
       error instanceof Error ? error.message : "Error interno al publicar";
 
-    try {
-      await prisma.socialPost.update({
-        where: { id: postId },
-        data: { status: "FAILED", errorMessage: message.slice(0, 500) },
-      });
-    } catch {
-      /* ignore */
+    if (post) {
+      const updated = await recordPublishFailure(
+        post,
+        error instanceof Error ? error : new Error(message)
+      );
+      return NextResponse.json(
+        {
+          error: message,
+          attempts: updated.publishAttempts,
+          permanent: updated.status === "FAILED",
+        },
+        { status: 500 }
+      );
     }
-
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

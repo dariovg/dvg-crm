@@ -338,6 +338,8 @@ model SocialPost {
   createdById     String?
   createdBy       User?               @relation("SocialPostCreator", fields: [createdById], references: [id], onDelete: SetNull)
   externalId      String?
+  publishAttempts Int                 @default(0)
+  lastPublishAttemptAt DateTime?
   likes           Int                 @default(0)
   comments        Int                 @default(0)
   shares          Int                 @default(0)
