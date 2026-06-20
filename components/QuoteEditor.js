@@ -14,7 +14,6 @@ import {
   markQuoteSent,
   markQuoteAccepted,
   duplicateQuote,
-  applyQuoteTemplate,
 } from "@/app/actions";
 import { PLANS, formatEuro, packLineDescription } from "@/lib/pricing-catalog";
 import {
@@ -27,7 +26,15 @@ import {
   QUOTE_BILLING_LABEL,
   VAT_RATE,
 } from "@/lib/quotes";
-import { QUOTE_PROJECT_LABEL, QUOTE_TEMPLATES } from "@/lib/quote-templates";
+import {
+  QUOTE_PROJECT_LABEL,
+  QUOTE_TEMPLATES,
+  isTemplateInLines,
+  appendTemplateLines,
+  removeTemplateFromLines,
+  resolveQuoteProjectLabel,
+  inferProjectTypeFromLines,
+} from "@/lib/quote-templates";
 
 export default function QuoteEditor({ quote, isAdmin, canEdit }) {
   const router = useRouter();
@@ -62,6 +69,7 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
   const totalWithVat = computeQuoteTotalWithVat(quoteMeta, lines);
   const vatPercent = Math.round(VAT_RATE * 100);
   const requiresApproval = needsApproval({ billing, discountPercent: discountPercent || null }, lines);
+  const projectLabel = resolveQuoteProjectLabel(lines, projectType);
 
   function syncPackPrices(nextBilling) {
     setLines((prev) =>
@@ -102,25 +110,23 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
     setLines(lines.filter((l) => !(l.type === "PACK" && l.packId === packId)));
   }
 
-  async function handleApplyTemplate(type) {
-    if (readOnly || type === projectType) return;
-    if (
-      lines.length > 0 &&
-      !window.confirm("¿Reemplazar líneas actuales con la plantilla seleccionada?")
-    ) {
-      return;
+  function toggleTemplate(type) {
+    if (readOnly) return;
+    let nextLines;
+    if (isTemplateInLines(type, lines)) {
+      nextLines = removeTemplateFromLines(type, lines);
+    } else {
+      const added = appendTemplateLines(
+        type,
+        billing,
+        lines,
+        catalogPriceForPack,
+        packLineDescription
+      );
+      nextLines = [...lines, ...added].map((l, i) => ({ ...l, sortOrder: i }));
     }
-    setBusy(true);
-    setMessage("");
-    try {
-      await applyQuoteTemplate(quote.id, type);
-      setProjectType(type);
-      router.refresh();
-    } catch (e) {
-      setMessage(e.message || "Error al aplicar plantilla");
-    } finally {
-      setBusy(false);
-    }
+    setLines(nextLines);
+    setProjectType(inferProjectTypeFromLines(nextLines, projectType));
   }
 
   async function handleSave() {
@@ -132,7 +138,7 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
         billing,
         notes,
         discountPercent,
-        projectType,
+        projectType: inferProjectTypeFromLines(lines, projectType),
         packId: lines.find((l) => l.type === "PACK")?.packId ?? null,
       });
       setMessage(
@@ -215,7 +221,7 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
           <h2>{quote.number}</h2>
           <p className="quote-editor-meta">
             <QuoteStatusBadge status={quote.status} /> ·{" "}
-            {QUOTE_PROJECT_LABEL[projectType] || projectType} ·{" "}
+            {projectLabel} ·{" "}
             {QUOTE_BILLING_LABEL[billing]}
             {requiresApproval && (
               <span className="quote-warning"> · Requiere aprobación</span>
@@ -256,26 +262,37 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
 
       {!readOnly && (
         <Accordion
-          title="Tipo de proyecto y plan"
-          subtitle={QUOTE_PROJECT_LABEL[projectType]}
+          title="Servicios del presupuesto"
+          subtitle={projectLabel}
           defaultOpen
           badge={formatEuro(totalWithVat)}
         >
+          <p className="muted quote-pack-hint" style={{ marginTop: 0 }}>
+            Pulsa cada servicio para <strong>añadirlo o quitarlo</strong>. Puedes combinar, por ejemplo,{" "}
+            <strong>Web / App + Agente IA</strong> en el mismo presupuesto.
+          </p>
           <div className="quote-template-picker">
-            {Object.values(QUOTE_TEMPLATES).map((tpl) => (
+            {Object.values(QUOTE_TEMPLATES).map((tpl) => {
+              const added = isTemplateInLines(tpl.id, lines);
+              return (
               <button
                 key={tpl.id}
                 type="button"
                 className={`quote-template-btn${
-                  projectType === tpl.id ? " quote-template-btn--active" : ""
+                  added ? " quote-template-btn--active" : ""
                 }`}
-                onClick={() => handleApplyTemplate(tpl.id)}
+                onClick={() => toggleTemplate(tpl.id)}
                 disabled={busy}
+                title={added ? "Quitar servicio del presupuesto" : "Añadir servicio al presupuesto"}
               >
                 <strong>{tpl.label}</strong>
-                <span>{tpl.description}</span>
+                <span>
+                  {tpl.description}
+                  {added ? " · Añadido" : " · Pulsa para añadir"}
+                </span>
               </button>
-            ))}
+            );
+            })}
           </div>
           <div className="field">
             <label>Facturación</label>
@@ -305,7 +322,7 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
             })}
           </div>
           <p className="muted quote-pack-hint">
-            Puedes combinar varios planes y líneas personalizadas en el mismo presupuesto.
+            Los planes IA (Starter, Pro…) se suman igual: pulsa para añadir o quitar cada uno.
           </p>
         </Accordion>
       )}

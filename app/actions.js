@@ -33,7 +33,14 @@ import {
   packLineDescription,
 } from "@/lib/quotes";
 import { planById } from "@/lib/pricing-catalog";
-import { buildLinesFromTemplate, templateById } from "@/lib/quote-templates";
+import {
+  buildLinesFromTemplate,
+  templateById,
+  isTemplateInLines,
+  appendTemplateLines,
+  removeTemplateFromLines,
+  inferProjectTypeFromLines,
+} from "@/lib/quote-templates";
 import { generateShareToken } from "@/lib/quote-share";
 import { recordAudit } from "@/lib/audit";
 import {
@@ -1370,23 +1377,37 @@ export async function applyQuoteTemplate(quoteId, projectType) {
   }
   if (!templateById(projectType)) throw new Error("Plantilla no válida");
 
-  const built = buildLinesFromTemplate(
-    projectType,
-    quote.billing,
-    catalogPriceForPack,
-    packLineDescription
-  );
+  const existing = quote.lines.map((l) => ({
+    type: l.type,
+    packId: l.packId,
+    description: l.description,
+    quantity: l.quantity,
+    unitPrice: l.unitPrice,
+    discountPercent: l.discountPercent,
+    sortOrder: l.sortOrder,
+  }));
+
+  const nextLines = isTemplateInLines(projectType, existing)
+    ? removeTemplateFromLines(projectType, existing)
+    : [
+        ...existing,
+        ...appendTemplateLines(
+          projectType,
+          quote.billing,
+          existing,
+          catalogPriceForPack,
+          packLineDescription
+        ),
+      ].map((l, i) => ({ ...l, sortOrder: i }));
 
   await prisma.quote.update({
     where: { id: quoteId },
     data: {
-      projectType,
-      billing: built.billing,
-      packId: built.packId,
-      notes: built.notes,
+      projectType: inferProjectTypeFromLines(nextLines, quote.projectType),
+      packId: nextLines.find((l) => l.type === "PACK")?.packId ?? null,
     },
   });
-  await syncQuoteLines(quoteId, built.lines);
+  await syncQuoteLines(quoteId, nextLines);
 
   revalidateQuotePaths(quoteId, quote.contactId);
   return { ok: true };
