@@ -9,6 +9,8 @@ import NotificationBell from "@/components/NotificationBell";
 import { HamburgerButton, MobileDrawer, BottomTabBar } from "@/components/MobileNav";
 import ThemeToggle from "@/components/ThemeToggle";
 import PageTransition from "@/components/PageTransition";
+import OnboardingChecklist from "@/components/OnboardingChecklist";
+import HelpButton from "@/components/HelpButton";
 import { canAccessSalesCrm } from "@/lib/permissions";
 
 function AppShellInner({ children }) {
@@ -32,11 +34,13 @@ function AppShellInner({ children }) {
         <div className="app-topbar">
           <HamburgerButton open={drawerOpen} onClick={() => setDrawerOpen((v) => !v)} />
           <div className="app-topbar-actions">
+            <HelpButton />
             <ThemeToggle compact className="theme-toggle--topbar" />
             {salesAccess && <NotificationBell />}
             {salesAccess && <GlobalSearch />}
           </div>
         </div>
+        <OnboardingChecklist />
         <PageTransition>{children}</PageTransition>
       </main>
       <BottomTabBar onMoreClick={openDrawer} />
