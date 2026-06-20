@@ -8,7 +8,7 @@ import {
 } from "@/lib/quotes";
 import { formatEuro } from "@/lib/pricing-catalog";
 
-export default function QuotePdfView({ quote }) {
+export default function QuotePdfView({ quote, showSignature = false, trackingPixel = null }) {
   const subtotal = computeQuoteSubtotal(quote.lines);
   const total = computeQuoteTotal(quote, quote.lines);
   const issued = new Date(quote.createdAt).toLocaleDateString("es-ES", {
@@ -119,6 +119,35 @@ export default function QuotePdfView({ quote }) {
           <h2>Observaciones</h2>
           <p>{quote.notes}</p>
         </section>
+      )}
+
+      {showSignature && quote.signedAt && (
+        <section className="quote-pdf-signature">
+          <h2>Aceptación del cliente</h2>
+          <p>
+            Firmado por <strong>{quote.signedByName || quote.contact.name}</strong> el{" "}
+            {new Date(quote.signedAt).toLocaleDateString("es-ES", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
+          {quote.clientSignature?.startsWith("data:image") ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={quote.clientSignature}
+              alt="Firma"
+              className="quote-pdf-signature-img"
+            />
+          ) : quote.signedByName ? (
+            <p className="quote-pdf-signature-typed">{quote.signedByName}</p>
+          ) : null}
+        </section>
+      )}
+
+      {trackingPixel && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={trackingPixel} alt="" width={1} height={1} className="quote-track-pixel" />
       )}
 
       <footer className="quote-pdf-footer">
