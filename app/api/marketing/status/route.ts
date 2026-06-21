@@ -24,21 +24,24 @@ import {
   isYouTubeConnected,
 } from "@/lib/social/youtube-connection.js";
 
+async function safe<T>(label: string, fn: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    console.error(`marketing/status ${label}:`, err);
+    return fallback;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || !isMarketingAuthorized(session)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const conn = await getTikTokConnection();
-  const { redirectUri } = getTikTokClientConfig();
-  const linkedInConn = await getLinkedInConnection();
-  const { redirectUri: linkedInRedirectUri } = getLinkedInClientConfig();
-  const youtubeConn = await getYouTubeConnection();
-  const { redirectUri: youtubeRedirectUri } = getYouTubeClientConfig();
-
   const twitterDiag = getTwitterConfigDiagnostics();
   let twitter = {
+    configured: twitterDiag.ready,
     ready: twitterDiag.ready,
     missing: twitterDiag.missing,
     username: null as string | null,
@@ -52,6 +55,7 @@ export async function GET(request: NextRequest) {
   ) {
     const check = await verifyTwitterCredentials();
     twitter = {
+      configured: true,
       ready: check.ready,
       missing: check.missing || [],
       username: check.username || null,
@@ -59,11 +63,18 @@ export async function GET(request: NextRequest) {
     };
   }
 
+  const conn = await safe("tiktok", () => getTikTokConnection(), null);
+  const { redirectUri } = getTikTokClientConfig();
+  const linkedInConn = await safe("linkedin", () => getLinkedInConnection(), null);
+  const { redirectUri: linkedInRedirectUri } = getLinkedInClientConfig();
+  const youtubeConn = await safe("youtube", () => getYouTubeConnection(), null);
+  const { redirectUri: youtubeRedirectUri } = getYouTubeClientConfig();
+
   return NextResponse.json({
     twitter,
     tiktok: {
       appConfigured: isTikTokAppConfigured(),
-      connected: await isTikTokConnected(),
+      connected: await safe("tiktok-connected", () => isTikTokConnected(), false),
       openId: conn?.openId ?? null,
       scope: conn?.scope ?? null,
       expiresAt: conn?.expiresAt?.toISOString() ?? null,
@@ -71,7 +82,7 @@ export async function GET(request: NextRequest) {
     },
     linkedin: {
       appConfigured: isLinkedInAppConfigured(),
-      connected: await isLinkedInConnected(),
+      connected: await safe("linkedin-connected", () => isLinkedInConnected(), false),
       openId: linkedInConn?.openId ?? null,
       scope: linkedInConn?.scope ?? null,
       expiresAt: linkedInConn?.expiresAt?.toISOString() ?? null,
@@ -80,12 +91,12 @@ export async function GET(request: NextRequest) {
     },
     youtube: {
       appConfigured: isYouTubeAppConfigured(),
-      connected: await isYouTubeConnected(),
+      connected: await safe("youtube-connected", () => isYouTubeConnected(), false),
       channelId: youtubeConn?.openId ?? null,
       scope: youtubeConn?.scope ?? null,
       expiresAt: youtubeConn?.expiresAt?.toISOString() ?? null,
       redirectUri: youtubeRedirectUri,
     },
-    configuredPlatforms: await listConfiguredPlatforms(),
+    configuredPlatforms: await safe("platforms", () => listConfiguredPlatforms(), []),
   });
 }

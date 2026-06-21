@@ -8,7 +8,13 @@ import { canConnectMarketingAccounts } from "@/lib/permissions";
 type OAuthPlatform = "tiktok" | "youtube" | "linkedin";
 
 type PlatformStatus = {
-  twitter: { ready: boolean; missing?: string[]; error?: string | null; username?: string | null };
+  twitter: {
+    configured?: boolean;
+    ready: boolean;
+    missing?: string[];
+    error?: string | null;
+    username?: string | null;
+  };
   tiktok: { appConfigured: boolean; connected: boolean };
   youtube: { appConfigured: boolean; connected: boolean };
   linkedin: { appConfigured: boolean; connected: boolean };
@@ -68,13 +74,16 @@ export default function PlatformStatusBar({ compact = false }: { compact?: boole
 
           if (item.key === "TWITTER") {
             const tw = status.twitter;
-            state = tw.ready && !tw.error ? "ok" : tw.ready && tw.error ? "warn" : "off";
-            if (tw.missing?.length) {
-              hint = `Vercel: ${tw.missing.join(", ")}`;
-            } else if (tw.error) {
-              hint = tw.error;
-            } else if (tw.username) {
-              hint = `@${tw.username}`;
+            const configured = tw.configured ?? !tw.missing?.length;
+            if (!configured) {
+              state = "off";
+              hint = tw.missing?.length ? `Vercel: ${tw.missing.join(", ")}` : "Variables en Vercel";
+            } else if (tw.ready && !tw.error) {
+              state = "ok";
+              hint = tw.username ? `@${tw.username}` : "Credenciales OK";
+            } else {
+              state = "warn";
+              hint = tw.error || "Verificación pendiente";
             }
           } else if (item.oauth) {
             const p = status[item.oauth];

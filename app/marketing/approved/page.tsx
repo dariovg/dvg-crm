@@ -44,17 +44,34 @@ export default function ApprovedPostsPage() {
       const approved = await approvedRes.json();
       const sched = await scheduledRes.json();
       const fail = await failedRes.json();
-      const status = statusRes.ok ? await statusRes.json() : { twitter: { ready: false } };
+      const status = statusRes.ok
+        ? await statusRes.json()
+        : { twitter: { configured: false, ready: false }, statusError: statusRes.status };
       setReady(approved.posts || []);
       setScheduled(sched.posts || []);
       setFailed(fail.posts || []);
       const tw = status.twitter;
-      const ready = typeof tw === "boolean" ? tw : tw?.ready && !tw?.error;
-      setXReady(!!ready);
-      if (typeof tw === "object") {
-        if (tw.missing?.length) setXIssue(`Falta en Vercel: ${tw.missing.join(", ")}`);
-        else if (tw.error) setXIssue(tw.error);
-        else setXIssue(null);
+      const configured =
+        typeof tw === "object" && tw
+          ? (tw.configured ?? (tw.missing?.length ? false : tw.ready))
+          : false;
+      const verified =
+        typeof tw === "boolean" ? tw : !!(tw?.ready && !tw?.error);
+      setXReady(configured && verified);
+      if (typeof tw === "object" && tw) {
+        if (tw.missing?.length) {
+          setXIssue(`Falta en Vercel: ${tw.missing.join(", ")}`);
+        } else if (tw.error) {
+          setXIssue(`X API: ${tw.error}`);
+        } else if (status.statusError) {
+          setXIssue(
+            `No se pudo comprobar el estado (HTTP ${status.statusError}). Recarga la página.`
+          );
+        } else if (configured && !verified) {
+          setXIssue("Variables detectadas pero la verificación con X falló.");
+        } else {
+          setXIssue(null);
+        }
       }
     } finally {
       setLoading(false);
