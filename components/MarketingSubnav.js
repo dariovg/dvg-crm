@@ -26,10 +26,7 @@ const GROUPS = [
   },
   {
     label: "Datos",
-    items: [
-      { href: "/marketing/analytics", label: "Analítica" },
-      { href: "/marketing/conexiones", label: "Conexiones" },
-    ],
+    items: [{ href: "/marketing/analytics", label: "Analítica" }],
   },
 ];
 

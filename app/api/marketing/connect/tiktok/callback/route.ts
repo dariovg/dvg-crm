@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     return NextResponse.redirect(
-      `${base}/marketing/conexiones?tiktok=error&msg=${encodeURIComponent(error)}`
+      `${base}/marketing?tiktok=error&msg=${encodeURIComponent(error)}`
     );
   }
 
@@ -20,14 +20,14 @@ export async function GET(request: NextRequest) {
 
   if (!code || !state || state !== savedState) {
     return NextResponse.redirect(
-      `${base}/marketing/conexiones?tiktok=error&msg=state_invalido`
+      `${base}/marketing?tiktok=error&msg=state_invalido`
     );
   }
 
   try {
     await exchangeTikTokCode(code, verifier || undefined);
     const res = NextResponse.redirect(
-      `${base}/marketing/conexiones?tiktok=ok`
+      `${base}/marketing?tiktok=ok`
     );
     res.cookies.delete("tiktok_oauth_state");
     res.cookies.delete("tiktok_pkce_verifier");
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "oauth_failed";
     return NextResponse.redirect(
-      `${base}/marketing/conexiones?tiktok=error&msg=${encodeURIComponent(msg)}`
+      `${base}/marketing?tiktok=error&msg=${encodeURIComponent(msg)}`
     );
   }
 }

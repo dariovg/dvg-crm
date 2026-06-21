@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     return NextResponse.redirect(
-      `${base}/marketing/conexiones?youtube=error&msg=${encodeURIComponent(error)}`
+      `${base}/marketing?youtube=error&msg=${encodeURIComponent(error)}`
     );
   }
 
@@ -19,21 +19,21 @@ export async function GET(request: NextRequest) {
 
   if (!code || !state || state !== savedState) {
     return NextResponse.redirect(
-      `${base}/marketing/conexiones?youtube=error&msg=state_invalido`
+      `${base}/marketing?youtube=error&msg=state_invalido`
     );
   }
 
   try {
     await exchangeYouTubeCode(code);
     const res = NextResponse.redirect(
-      `${base}/marketing/conexiones?youtube=ok`
+      `${base}/marketing?youtube=ok`
     );
     res.cookies.delete("youtube_oauth_state");
     return res;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "oauth_failed";
     return NextResponse.redirect(
-      `${base}/marketing/conexiones?youtube=error&msg=${encodeURIComponent(msg)}`
+      `${base}/marketing?youtube=error&msg=${encodeURIComponent(msg)}`
     );
   }
 }

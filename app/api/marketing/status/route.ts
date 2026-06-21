@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth-options";
 import { isMarketingAuthorized } from "@/lib/marketing-auth";
-import { isTwitterConfigured } from "@/lib/social/twitter.js";
+import { getTwitterConfigDiagnostics, verifyTwitterCredentials } from "@/lib/social/twitter.js";
 import { listConfiguredPlatforms } from "@/lib/social/publish.js";
 import {
   getTikTokClientConfig,
@@ -24,7 +24,7 @@ import {
   isYouTubeConnected,
 } from "@/lib/social/youtube-connection.js";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || !isMarketingAuthorized(session)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -37,8 +37,30 @@ export async function GET() {
   const youtubeConn = await getYouTubeConnection();
   const { redirectUri: youtubeRedirectUri } = getYouTubeClientConfig();
 
+  const twitterDiag = getTwitterConfigDiagnostics();
+  let twitter = {
+    ready: twitterDiag.ready,
+    missing: twitterDiag.missing,
+    username: null as string | null,
+    error: null as string | null,
+  };
+
+  if (
+    session.user.role === "ADMIN" &&
+    twitterDiag.ready &&
+    request.nextUrl.searchParams.get("verify") === "1"
+  ) {
+    const check = await verifyTwitterCredentials();
+    twitter = {
+      ready: check.ready,
+      missing: check.missing || [],
+      username: check.username || null,
+      error: check.error || null,
+    };
+  }
+
   return NextResponse.json({
-    twitter: isTwitterConfigured(),
+    twitter,
     tiktok: {
       appConfigured: isTikTokAppConfigured(),
       connected: await isTikTokConnected(),

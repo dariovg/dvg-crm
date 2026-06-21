@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   if (error) {
     const msg = errorDescription || error;
     return NextResponse.redirect(
-      `${base}/marketing/conexiones?linkedin=error&msg=${encodeURIComponent(msg)}`
+      `${base}/marketing?linkedin=error&msg=${encodeURIComponent(msg)}`
     );
   }
 
@@ -21,21 +21,21 @@ export async function GET(request: NextRequest) {
 
   if (!code || !state || state !== savedState) {
     return NextResponse.redirect(
-      `${base}/marketing/conexiones?linkedin=error&msg=state_invalido`
+      `${base}/marketing?linkedin=error&msg=state_invalido`
     );
   }
 
   try {
     await exchangeLinkedInCode(code);
     const res = NextResponse.redirect(
-      `${base}/marketing/conexiones?linkedin=ok`
+      `${base}/marketing?linkedin=ok`
     );
     res.cookies.delete("linkedin_oauth_state");
     return res;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "oauth_failed";
     return NextResponse.redirect(
-      `${base}/marketing/conexiones?linkedin=error&msg=${encodeURIComponent(msg)}`
+      `${base}/marketing?linkedin=error&msg=${encodeURIComponent(msg)}`
     );
   }
 }

@@ -1,11 +1,6 @@
-import { Suspense } from "react";
-import MarketingConexionesPage from "./MarketingConexionesClient";
-import { ConexionesSkeleton } from "@/components/Skeleton";
+import { redirect } from "next/navigation";
 
-export default function ConexionesPage() {
-  return (
-    <Suspense fallback={<ConexionesSkeleton />}>
-      <MarketingConexionesPage />
-    </Suspense>
-  );
+/** Conexiones integradas en Marketing → Resumen */
+export default function MarketingConexionesRedirect() {
+  redirect("/marketing");
 }

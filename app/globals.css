@@ -3711,6 +3711,51 @@ body {
   background: var(--surface-2);
   margin-bottom: .25rem;
 }
+.platform-status-bar {
+  margin-bottom: 1.25rem;
+}
+.platform-status-bar--compact { margin-bottom: .75rem; }
+.platform-status-flash { margin-bottom: .75rem; }
+.platform-status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+.platform-chip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .35rem .5rem;
+  padding: .45rem .75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: .82rem;
+}
+.platform-chip--ok { border-color: color-mix(in srgb, var(--success) 45%, var(--border)); }
+.platform-chip--warn { border-color: color-mix(in srgb, var(--gold) 50%, var(--border)); }
+.platform-chip--off { opacity: .75; }
+.platform-chip-label { font-weight: 700; }
+.platform-chip-state {
+  font-size: .72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  color: var(--text-muted);
+}
+.platform-chip-hint {
+  flex: 1 1 100%;
+  font-size: .72rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+.platform-chip-link {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+}
+.platform-chip-link:hover { text-decoration: underline; }
 .marketing-count-badge {
   font-size: 1.5rem;
   font-weight: 800;

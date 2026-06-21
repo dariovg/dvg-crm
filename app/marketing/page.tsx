@@ -1,11 +1,13 @@
 // app/marketing/page.tsx
 import Link from "next/link";
+import { Suspense } from "react";
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth-options";
 import { canAccessMarketing, canApproveMarketingPosts, canAccessSalesCrm } from "@/lib/permissions";
 import { getMarketingDashboardStats } from "@/lib/marketing-stats";
 import { isTwitterConfigured } from "@/lib/social/twitter.js";
+import PlatformStatusBar from "@/components/marketing/PlatformStatusBar";
 
 export default async function MarketingDashboard() {
   const session = await getServerSession(authOptions);
@@ -35,6 +37,10 @@ export default async function MarketingDashboard() {
         </Link>
       </header>
 
+      <Suspense fallback={null}>
+        <PlatformStatusBar />
+      </Suspense>
+
       <section className="marketing-pipeline">
         <Link href="/marketing/create" className="marketing-pipeline-step">
           <span className="marketing-pipeline-num">1</span>
@@ -62,8 +68,9 @@ export default async function MarketingDashboard() {
 
       {isAdmin && !xReady && (
         <div className="alert alert-warn">
-          Configura las claves de X en Vercel para publicar con un clic desde{" "}
-          <Link href="/marketing/approved">Publicar</Link>.
+          X no está listo para publicar. Revisa la barra de plataformas arriba: suele
+          faltar <code>X_ACCESS_TOKEN</code> y <code>X_ACCESS_TOKEN_SECRET</code> en
+          Vercel (además de Consumer Key/Secret).
         </div>
       )}
 

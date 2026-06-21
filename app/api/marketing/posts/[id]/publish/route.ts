@@ -30,7 +30,7 @@ export async function POST(
     if (!(await isPlatformReadyToPublish(post.platform))) {
       return NextResponse.json(
         {
-          error: `API de ${post.platform} no configurada. Ve a Marketing → Conexiones.`,
+          error: `API de ${post.platform} no configurada. Ve a Marketing → Resumen.`,
           manual: true,
         },
         { status: 503 }

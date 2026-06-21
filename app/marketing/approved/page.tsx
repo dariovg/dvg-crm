@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import SocialPostCard from "@/components/marketing/SocialPostCard";
 import PublishButton from "@/components/marketing/PublishButton";
 import EmptyState from "@/components/EmptyState";
 import { MarketingPostsSkeleton } from "@/components/Skeleton";
+import PlatformStatusBar from "@/components/marketing/PlatformStatusBar";
 
 interface Post {
   id: string;
@@ -28,7 +29,8 @@ export default function ApprovedPostsPage() {
   const [scheduled, setScheduled] = useState<Post[]>([]);
   const [failed, setFailed] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [xConfigured, setXConfigured] = useState(false);
+  const [xReady, setXReady] = useState(false);
+  const [xIssue, setXIssue] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -37,16 +39,23 @@ export default function ApprovedPostsPage() {
         fetch("/api/marketing/posts?status=APPROVED"),
         fetch("/api/marketing/posts?status=SCHEDULED"),
         fetch("/api/marketing/posts?status=FAILED"),
-        fetch("/api/marketing/status"),
+        fetch("/api/marketing/status?verify=1"),
       ]);
       const approved = await approvedRes.json();
       const sched = await scheduledRes.json();
       const fail = await failedRes.json();
-      const status = statusRes.ok ? await statusRes.json() : { twitter: false, tiktok: {} };
+      const status = statusRes.ok ? await statusRes.json() : { twitter: { ready: false } };
       setReady(approved.posts || []);
       setScheduled(sched.posts || []);
       setFailed(fail.posts || []);
-      setXConfigured(!!status.twitter);
+      const tw = status.twitter;
+      const ready = typeof tw === "boolean" ? tw : tw?.ready && !tw?.error;
+      setXReady(!!ready);
+      if (typeof tw === "object") {
+        if (tw.missing?.length) setXIssue(`Falta en Vercel: ${tw.missing.join(", ")}`);
+        else if (tw.error) setXIssue(tw.error);
+        else setXIssue(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -80,12 +89,15 @@ export default function ApprovedPostsPage() {
         </Link>
       </header>
 
-      {!xConfigured && isAdmin && (
+      <Suspense fallback={null}>
+        <PlatformStatusBar compact />
+      </Suspense>
+
+      {!xReady && isAdmin && (
         <div className="alert alert-warn">
-          <strong>API de X no configurada.</strong> Añade{" "}
-          <code>X_API_KEY</code>, <code>X_API_SECRET</code>, <code>X_ACCESS_TOKEN</code> y{" "}
-          <code>X_ACCESS_TOKEN_SECRET</code> en Vercel para publicar automáticamente.
-          Mientras tanto puedes copiar el texto y publicar manualmente.
+          <strong>X no publicará automáticamente.</strong>{" "}
+          {xIssue || "Revisa las variables en Vercel."} Mientras tanto puedes copiar el
+          texto y publicar manualmente.
         </div>
       )}
 
@@ -138,7 +150,7 @@ export default function ApprovedPostsPage() {
                     {new Date(post.scheduledAt).toLocaleString("es-ES")}
                   </p>
                 )}
-                {isAdmin && xConfigured && (
+                {isAdmin && (
                   <div className="marketing-approval-actions">
                     <PublishButton
                       postId={post.id}

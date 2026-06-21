@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     if (!(await isTikTokConnected())) {
       results.TIKTOK = {
         success: false,
-        error: "Conecta TikTok en Marketing → Conexiones.",
+        error: "Conecta TikTok en Marketing → Resumen.",
       };
     } else {
       try {
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     } else if (!(await isLinkedInConnected())) {
       results.LINKEDIN = {
         success: false,
-        error: "Conecta LinkedIn en Marketing → Conexiones.",
+        error: "Conecta LinkedIn en Marketing → Resumen.",
       };
     } else {
       try {
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
     } else if (!(await isYouTubeConnected())) {
       results.YOUTUBE = {
         success: false,
-        error: "Conecta YouTube en Marketing → Conexiones.",
+        error: "Conecta YouTube en Marketing → Resumen.",
       };
     } else {
       try {
