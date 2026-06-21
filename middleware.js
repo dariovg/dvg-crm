@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import {
   marketingModuleRedirect,
   marketingSalesRedirect,
+  commercialRestrictedRedirect,
+  ceoDashboardRedirect,
 } from "@/lib/rbac-routes";
 
 export default withAuth(
@@ -31,6 +33,11 @@ export default withAuth(
       return NextResponse.next();
     }
 
+    const ceoDenied = ceoDashboardRedirect(role, pathname);
+    if (ceoDenied) {
+      return NextResponse.redirect(new URL(ceoDenied, req.url));
+    }
+
     if (pathname.startsWith("/admin")) {
       if (role !== "ADMIN") {
         return NextResponse.redirect(new URL("/dashboard", req.url));
@@ -51,6 +58,11 @@ export default withAuth(
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       return NextResponse.next();
+    }
+
+    const commercialDenied = commercialRestrictedRedirect(role, pathname);
+    if (commercialDenied) {
+      return NextResponse.redirect(new URL(commercialDenied, req.url));
     }
 
     const salesDenied = marketingSalesRedirect(role, pathname);
@@ -91,6 +103,8 @@ export const config = {
     "/tasks/:path*",
     "/presupuestos",
     "/presupuestos/:path*",
+    "/ceo",
+    "/ceo/:path*",
     "/admin",
     "/admin/:path*",
     "/marketing",

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyIngestSecret } from "@/lib/ingest";
 import { getPlatformLimit } from "@/lib/social/platform-limits.js";
 import { rateLimitResponse } from "@/lib/rate-limit";
+import { notifyAdminsMarketingPending } from "@/lib/notifications";
 
 const VALID_PLATFORMS = new Set([
   "TWITTER",
@@ -94,6 +95,8 @@ async function createDraft({
       mediaUrls: Array.isArray(mediaUrls) ? mediaUrls : [],
     },
   });
+
+  await notifyAdminsMarketingPending(post);
 
   return { ok: true, postId: post.id, platform: plat, status: post.status };
 }

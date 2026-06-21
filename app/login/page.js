@@ -3,6 +3,9 @@
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
+import LanguageToggle from "@/components/LanguageToggle";
+import { useLocale } from "@/components/LocaleProvider";
+import { getDefaultHomeForRole } from "@/lib/permissions";
 
 function LockIcon() {
   return (
@@ -75,6 +78,7 @@ function EyeIcon({ off }) {
 }
 
 export default function LoginPage() {
+  const { t, locale } = useLocale();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -93,36 +97,44 @@ export default function LoginPage() {
     });
 
     if (result?.error) {
-      setError("Email o contraseña incorrectos.");
+      setError(t("auth.error"));
       setLoading(false);
     } else if (result?.ok) {
       const sessionRes = await fetch("/api/auth/session");
       const sessionData = await sessionRes.json();
       const role = sessionData?.user?.role;
-      window.location.href = role === "MARKETING" ? "/marketing" : "/dashboard";
+      window.location.href = getDefaultHomeForRole(role);
     }
   };
 
   return (
     <div className="login-page">
-      <ThemeToggle compact className="login-theme-toggle" />
+      <div className="login-top-tools">
+        <LanguageToggle compact className="login-locale-toggle" />
+        <ThemeToggle compact className="login-theme-toggle" />
+      </div>
       <div className="login-bg-glow login-bg-glow--left" />
       <div className="login-bg-glow login-bg-glow--right" />
 
       <div className="login-layout">
         <aside className="login-hero">
-          <p className="login-hero-tag">DVG Studio</p>
+          <p className="login-hero-tag">{t("login.heroTag")}</p>
           <h2>
-            Tu panel de <span className="brand-ia">ventas</span>
+            {locale === "en" ? (
+              <>
+                Your sales <span className="brand-ia">hub</span>
+              </>
+            ) : (
+              <>
+                Tu panel de <span className="brand-ia">ventas</span>
+              </>
+            )}
           </h2>
-          <p className="login-hero-text">
-            Leads, pipeline, tareas y seguimiento comercial en un solo lugar.
-            Acceso exclusivo para el equipo.
-          </p>
+          <p className="login-hero-text">{t("login.heroText")}</p>
           <ul className="login-hero-list">
-            <li>Pipeline visual en tiempo real</li>
-            <li>Leads desde la web automáticos</li>
-            <li>Exportación y gestión de tareas</li>
+            <li>{t("login.heroList1")}</li>
+            <li>{t("login.heroList2")}</li>
+            <li>{t("login.heroList3")}</li>
           </ul>
         </aside>
 
@@ -131,12 +143,12 @@ export default function LoginPage() {
             <div className="login-logo">
               DVG <span className="brand-ia">CRM</span>
             </div>
-            <p>Inicia sesión con tu cuenta corporativa</p>
+            <p>{t("auth.subtitle")}</p>
           </div>
 
           <form className="login-form" onSubmit={handleLogin}>
             <div className="login-field">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">{t("auth.email")}</label>
               <div className={`login-input-wrap${error ? " login-input-wrap--error" : ""}`}>
                 <span className="login-input-icon">
                   <MailIcon />
@@ -156,7 +168,7 @@ export default function LoginPage() {
             </div>
 
             <div className="login-field">
-              <label htmlFor="password">Contraseña</label>
+              <label htmlFor="password">{t("auth.password")}</label>
               <div className={`login-input-wrap${error ? " login-input-wrap--error" : ""}`}>
                 <span className="login-input-icon">
                   <LockIcon />
@@ -177,7 +189,7 @@ export default function LoginPage() {
                   className="login-toggle-pass"
                   onClick={() => setShowPass((v) => !v)}
                   tabIndex={-1}
-                  aria-label={showPass ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  aria-label={showPass ? t("auth.hidePassword") : t("auth.showPassword")}
                 >
                   <EyeIcon off={showPass} />
                 </button>
@@ -194,16 +206,16 @@ export default function LoginPage() {
               {loading ? (
                 <>
                   <span className="login-spinner" aria-hidden />
-                  Verificando…
+                  {t("auth.signingIn")}
                 </>
               ) : (
-                "Entrar al CRM"
+                t("auth.signIn")
               )}
             </button>
           </form>
 
           <p className="login-foot">
-            <LockIcon /> Conexión cifrada · Acceso restringido
+            <LockIcon /> {t("auth.secure")}
           </p>
         </div>
       </div>

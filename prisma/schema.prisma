@@ -23,6 +23,7 @@ enum UserRole {
   ADMIN
   MANAGER
   MEMBER
+  COMMERCIAL
 }
 
 enum TaskPriority {

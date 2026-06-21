@@ -20,13 +20,29 @@ const PLATFORMS: {
   label: string;
   icon: string;
   limit: number;
+  enabled: boolean;
+  tooltip?: string;
 }[] = [
-  { value: "TWITTER", label: "X / Twitter", icon: "𝕏", limit: 280 },
-  { value: "LINKEDIN", label: "LinkedIn", icon: "💼", limit: 3000 },
-  { value: "INSTAGRAM", label: "Instagram", icon: "📷", limit: 2200 },
-  { value: "TIKTOK", label: "TikTok", icon: "🎵", limit: 150 },
-  { value: "YOUTUBE", label: "YouTube", icon: "▶", limit: 5000 },
-  { value: "FACEBOOK", label: "Facebook", icon: "f", limit: 5000 },
+  { value: "TWITTER", label: "X / Twitter", icon: "𝕏", limit: 280, enabled: true },
+  { value: "LINKEDIN", label: "LinkedIn", icon: "💼", limit: 3000, enabled: true },
+  {
+    value: "INSTAGRAM",
+    label: "Instagram",
+    icon: "📷",
+    limit: 2200,
+    enabled: false,
+    tooltip: "Próximamente — publicación automática en desarrollo",
+  },
+  { value: "TIKTOK", label: "TikTok", icon: "🎵", limit: 150, enabled: true },
+  { value: "YOUTUBE", label: "YouTube", icon: "▶", limit: 5000, enabled: true },
+  {
+    value: "FACEBOOK",
+    label: "Facebook",
+    icon: "f",
+    limit: 5000,
+    enabled: false,
+    tooltip: "Próximamente — publicación automática en desarrollo",
+  },
 ];
 
 const PLATFORM_HINTS: Partial<Record<SocialPlatform, string>> = {
@@ -154,18 +170,23 @@ export function PublishForm({
               <button
                 key={p.value}
                 type="button"
+                title={!p.enabled ? p.tooltip : undefined}
+                disabled={!p.enabled}
                 onClick={() =>
+                  p.enabled &&
                   setFormData({ ...formData, platform: p.value })
                 }
                 className={`marketing-platform-btn${
                   formData.platform === p.value
                     ? " marketing-platform-btn--active"
                     : ""
-                }`}
+                }${!p.enabled ? " marketing-platform-btn--disabled" : ""}`}
               >
                 <span className="marketing-platform-icon">{p.icon}</span>
                 <span>{p.label}</span>
-                <span className="muted">{p.limit} máx.</span>
+                <span className="muted">
+                  {!p.enabled ? "Próximamente" : `${p.limit} máx.`}
+                </span>
               </button>
             ))}
           </div>

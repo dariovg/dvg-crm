@@ -3,13 +3,21 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { getNavLinksForSession } from "@/lib/nav-links";
+import { useEffect, useState } from "react";
+import { getNavSectionsForSession } from "@/lib/nav-links";
 import ThemeToggle from "@/components/ThemeToggle";
 import LanguageToggle from "@/components/LanguageToggle";
 import NavIcon from "@/components/NavIcon";
 import BrandLogo from "@/components/BrandLogo";
 import { useLocale } from "@/components/LocaleProvider";
 import { navLabel } from "@/lib/i18n";
+
+function sectionHasActiveLink(links, pathname) {
+  return links.some((l) => {
+    if (l.href === "/dashboard") return pathname === "/dashboard";
+    return pathname === l.href || pathname.startsWith(`${l.href}/`);
+  });
+}
 
 export default function Sidebar() {
   const { data: session } = useSession();
@@ -18,12 +26,35 @@ export default function Sidebar() {
   const role = session?.user?.role;
   const isAdmin = role === "ADMIN";
   const isManager = role === "MANAGER";
-  const navLinks = getNavLinksForSession(session);
+  const isCommercial = role === "COMMERCIAL";
+  const sections = getNavSectionsForSession(session);
   const isMarketingOnly = role === "MARKETING";
+
+  const [openSections, setOpenSections] = useState(() =>
+    Object.fromEntries(sections.map((s) => [s.id, true]))
+  );
+
+  useEffect(() => {
+    setOpenSections((prev) => {
+      const next = { ...prev };
+      for (const section of sections) {
+        if (sectionHasActiveLink(section.links, pathname)) {
+          next[section.id] = true;
+        } else if (next[section.id] === undefined) {
+          next[section.id] = true;
+        }
+      }
+      return next;
+    });
+  }, [pathname, sections]);
 
   function isActive(href) {
     if (href === "/dashboard") return pathname === "/dashboard";
     return pathname === href || pathname.startsWith(`${href}/`);
+  }
+
+  function toggleSection(id) {
+    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
   return (
@@ -32,19 +63,44 @@ export default function Sidebar() {
         <BrandLogo />
       </div>
       <nav className="sidebar-nav" aria-label="Principal">
-        {!isMarketingOnly && (
-          <span className="sidebar-nav-label">{t("sidebar.commercial")}</span>
-        )}
-        {navLinks.map((l) => (
-          <Link
-            key={l.href}
-            href={l.href}
-            className={`sidebar-link${isActive(l.href) ? " sidebar-link--active" : ""}`}
-          >
-            <NavIcon name={l.icon} className="sidebar-link-icon" />
-            <span>{navLabel(l.href, locale)}</span>
-          </Link>
-        ))}
+        {sections.map((section) => {
+          const isOpen = openSections[section.id] !== false;
+          const hasActive = sectionHasActiveLink(section.links, pathname);
+          return (
+            <div
+              key={section.id}
+              className={`sidebar-section${hasActive ? " sidebar-section--active" : ""}`}
+            >
+              <button
+                type="button"
+                className="sidebar-section-toggle"
+                onClick={() => toggleSection(section.id)}
+                aria-expanded={isOpen}
+              >
+                <span>{t(section.labelKey)}</span>
+                <NavIcon
+                  name="chevron"
+                  className={`sidebar-section-chevron${isOpen ? " sidebar-section-chevron--open" : ""}`}
+                  size={14}
+                />
+              </button>
+              {isOpen && (
+                <div className="sidebar-section-links">
+                  {section.links.map((l) => (
+                    <Link
+                      key={l.href}
+                      href={l.href}
+                      className={`sidebar-link${isActive(l.href) ? " sidebar-link--active" : ""}`}
+                    >
+                      <NavIcon name={l.icon} className="sidebar-link-icon" />
+                      <span>{navLabel(l.href, locale)}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </nav>
       <div className="sidebar-foot">
         <div className="sidebar-locale">
@@ -52,7 +108,7 @@ export default function Sidebar() {
           <LanguageToggle className="language-toggle--sidebar" />
         </div>
         <ThemeToggle className="theme-toggle--sidebar" />
-        {role !== "MARKETING" && (
+        {!isMarketingOnly && (
           <p className="shortcuts-hint">
             <kbd>?</kbd> {t("sidebar.shortcuts")} · <kbd>⌘K</kbd> {t("sidebar.search")}
           </p>
@@ -67,7 +123,7 @@ export default function Sidebar() {
           <div className="sidebar-user">
             <p>{session.user.name || session.user.email}</p>
             <span
-              className={`role-badge${isAdmin ? " role-badge--admin" : isManager ? " role-badge--manager" : role === "MARKETING" ? " role-badge--marketing" : ""}`}
+              className={`role-badge${isAdmin ? " role-badge--admin" : isManager ? " role-badge--manager" : role === "MARKETING" ? " role-badge--marketing" : isCommercial ? " role-badge--commercial" : ""}`}
             >
               {isAdmin
                 ? t("role.admin")
@@ -75,7 +131,9 @@ export default function Sidebar() {
                   ? t("role.manager")
                   : role === "MARKETING"
                     ? t("role.marketing")
-                    : t("role.member")}
+                    : isCommercial
+                      ? t("role.commercial")
+                      : t("role.member")}
             </span>
             <button
               type="button"

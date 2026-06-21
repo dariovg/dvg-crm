@@ -14,12 +14,12 @@ import HelpButton from "@/components/HelpButton";
 import UserMenu from "@/components/UserMenu";
 import LanguageToggle from "@/components/LanguageToggle";
 import LocaleProvider from "@/components/LocaleProvider";
-import { canAccessSalesCrm } from "@/lib/permissions";
+import { canReceiveInAppNotifications } from "@/lib/permissions";
 
 function AppShellInner({ children }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { data: session } = useSession();
-  const salesAccess = canAccessSalesCrm(session);
+  const notifyAccess = canReceiveInAppNotifications(session);
 
   function openDrawer() {
     setDrawerOpen(true);
@@ -39,8 +39,8 @@ function AppShellInner({ children }) {
           <div className="app-topbar-actions">
             <HelpButton />
             <ThemeToggle compact className="theme-toggle--topbar" />
-            {salesAccess && <NotificationBell />}
-            {salesAccess && <GlobalSearch />}
+            {notifyAccess && <NotificationBell />}
+            {notifyAccess && <GlobalSearch />}
             <UserMenu />
           </div>
         </div>
@@ -48,7 +48,7 @@ function AppShellInner({ children }) {
         <PageTransition>{children}</PageTransition>
       </main>
       <BottomTabBar onMoreClick={openDrawer} />
-      {salesAccess && <KeyboardShortcuts />}
+      {notifyAccess && <KeyboardShortcuts />}
     </div>
   );
 }

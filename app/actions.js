@@ -15,6 +15,7 @@ import {
   canApproveQuote,
   canEditQuote,
   canAccessSalesCrm,
+  canAccessTasksCalendar,
   canDeleteContact,
   canDeleteQuote,
   contactScope,
@@ -24,7 +25,7 @@ import {
 import { notifyAssignment, sendMail, isMailConfigured } from "@/lib/mail";
 import { saveCrmSettings as persistCrmSettings, getScoringRules } from "@/lib/crm-settings";
 import { withLeadScores } from "@/lib/lead-score";
-import { pushNotification } from "@/lib/notifications";
+import { pushNotification, notifyAssignee as pushAssigneeNotification, notifyAdminsQuotePending as pushQuotePendingToAdmins } from "@/lib/notifications";
 import { generateTotpSecret, getTotpUri, verifyTotpToken } from "@/lib/totp";
 import {
   catalogPriceForPack,
@@ -66,14 +67,7 @@ function appUrl() {
 async function notifyAssignee(userId, assignee, type, title, path) {
   if (!assignee?.id) return;
   await mailAssignee(assignee, type, title, path);
-  if (userId !== assignee.id) {
-    await pushNotification(assignee.id, {
-      type: type === "lead" ? "lead_assigned" : "task_assigned",
-      title: type === "lead" ? "Lead asignado" : "Tarea asignada",
-      body: title,
-      link: path,
-    });
-  }
+  await pushAssigneeNotification(userId, assignee, { type, title, link: path });
 }
 
 async function mailAssignee(assignee, type, title, path) {
@@ -434,6 +428,7 @@ export async function createTask(
   recurDays
 ) {
   const session = await requireAuthSession();
+  if (!canAccessTasksCalendar(session)) throw new Error("No autorizado");
   await getContactForUser(session, contactId);
   const targetAssignee =
     isStaff(session) && assigneeId ? assigneeId : actorId(session);
@@ -463,7 +458,7 @@ export async function createTask(
     const assignee = await prisma.user.findUnique({
       where: { id: targetAssignee },
     });
-    await notifyAssignee(actorId(session), assignee, "task", title, `/leads/${contactId}`);
+    await notifyAssignee(actorId(session), assignee, "task", title, `/tasks`);
   }
 
   revalidatePath("/tasks");
@@ -475,6 +470,7 @@ export async function createTask(
 
 export async function toggleTask(taskId, done) {
   const session = await requireAuthSession();
+  if (!canAccessTasksCalendar(session)) throw new Error("No autorizado");
   const task = await prisma.task.findUnique({ where: { id: taskId } });
   if (!task || !canAccessTask(session, task)) throw new Error("No autorizado");
   const wasDone = task.done;
@@ -504,6 +500,7 @@ export async function toggleTask(taskId, done) {
 
 export async function updateTask(taskId, { title, dueAt, assigneeId, done, priority, recurDays }) {
   const session = await requireAuthSession();
+  if (!canAccessTasksCalendar(session)) throw new Error("No autorizado");
   const task = await prisma.task.findUnique({ where: { id: taskId } });
   if (!task || !canAccessTask(session, task)) throw new Error("No autorizado");
 
@@ -541,7 +538,7 @@ export async function updateTask(taskId, { title, dueAt, assigneeId, done, prior
       assignee,
       "task",
       title || task.title,
-      `/leads/${task.contactId}`
+      `/tasks`
     );
   }
 
@@ -553,6 +550,7 @@ export async function updateTask(taskId, { title, dueAt, assigneeId, done, prior
 
 export async function deleteTask(taskId) {
   const session = await requireAuthSession();
+  if (!canAccessTasksCalendar(session)) throw new Error("No autorizado");
   const task = await prisma.task.findUnique({ where: { id: taskId } });
   if (!task || !canAccessTask(session, task)) throw new Error("No autorizado");
   await prisma.task.delete({ where: { id: taskId } });
@@ -680,7 +678,7 @@ export async function createTeamUser({ email, name, password, role }) {
   const session = await requireAdminSession();
   const normalized = email.trim().toLowerCase();
   if (!normalized || !password) throw new Error("Email y contraseña obligatorios");
-  if (!["MEMBER", "MANAGER", "MARKETING"].includes(role)) throw new Error("Rol no válido");
+  if (!["MEMBER", "MANAGER", "MARKETING", "COMMERCIAL"].includes(role)) throw new Error("Rol no válido");
 
   const existing = await prisma.user.findUnique({ where: { email: normalized } });
   if (existing) throw new Error("Ya existe ese email");
@@ -714,7 +712,7 @@ export async function updateTeamUser(userId, { name, role }) {
   const data = {};
   if (name?.trim()) data.name = name.trim();
   if (role) {
-    if (!["MEMBER", "MANAGER", "ADMIN", "MARKETING"].includes(role)) {
+    if (!["MEMBER", "MANAGER", "ADMIN", "MARKETING", "COMMERCIAL"].includes(role)) {
       throw new Error("Rol no válido");
     }
     data.role = role;
@@ -969,23 +967,6 @@ function defaultValidUntil() {
   return d;
 }
 
-async function notifyAdminsQuotePending(quote) {
-  const admins = await prisma.user.findMany({
-    where: { role: "ADMIN" },
-    select: { id: true },
-  });
-  const link = `/presupuestos/${quote.id}`;
-  const title = `Presupuesto ${quote.number} pendiente de aprobación`;
-  const body = `${quote.contact?.name || "Cliente"} — precio pack por debajo del catálogo`;
-  for (const admin of admins) {
-    await pushNotification(admin.id, {
-      type: "quote_pending",
-      title,
-      body,
-      link,
-    });
-  }
-}
 
 async function syncQuoteLines(quoteId, lines) {
   await prisma.quoteLine.deleteMany({ where: { quoteId } });
@@ -1177,7 +1158,7 @@ export async function saveQuote(quoteId, payload) {
       where: { id: quoteId },
       data: { status: "PENDING_APPROVAL", approvalNote: null },
     });
-    await notifyAdminsQuotePending({ ...quote, contact: quote.contact });
+    await pushQuotePendingToAdmins({ ...quote, contact: quote.contact });
   } else if (!requiresApproval && quote.status === "PENDING_APPROVAL") {
     await prisma.quote.update({
       where: { id: quoteId },

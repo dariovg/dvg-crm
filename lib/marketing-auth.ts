@@ -1,11 +1,8 @@
-// lib/marketing-auth.ts
-import { Session } from "next-auth";
+import type { Session } from "next-auth";
+import { canAccessMarketing } from "./permissions";
 
 export function isMarketingAuthorized(session: Session | null): boolean {
-  if (!session || !session.user) return false;
-  return (
-    session.user.role === "ADMIN" || session.user.role === "MARKETING"
-  );
+  return canAccessMarketing(session);
 }
 
 export function requireMarketingRole(session: Session | null): void {

@@ -33,6 +33,7 @@ export function MobileDrawer({ open, onClose }) {
   const role = session?.user?.role;
   const isAdmin = role === "ADMIN";
   const isManager = role === "MANAGER";
+  const isCommercial = role === "COMMERCIAL";
   const navLinks = getNavLinksForSession(session);
 
   function handleLinkClick() {
@@ -89,7 +90,7 @@ export function MobileDrawer({ open, onClose }) {
             <div className="sidebar-user">
               <p>{session.user.name || session.user.email}</p>
               <span
-                className={`role-badge${isAdmin ? " role-badge--admin" : isManager ? " role-badge--manager" : role === "MARKETING" ? " role-badge--marketing" : ""}`}
+                className={`role-badge${isAdmin ? " role-badge--admin" : isManager ? " role-badge--manager" : role === "MARKETING" ? " role-badge--marketing" : isCommercial ? " role-badge--commercial" : ""}`}
               >
                 {isAdmin
                   ? t("role.admin")
@@ -97,7 +98,9 @@ export function MobileDrawer({ open, onClose }) {
                     ? t("role.manager")
                     : role === "MARKETING"
                       ? t("role.marketing")
-                      : t("role.member")}
+                      : isCommercial
+                        ? t("role.commercial")
+                        : t("role.member")}
               </span>
               <button
                 type="button"

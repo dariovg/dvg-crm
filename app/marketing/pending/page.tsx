@@ -1,4 +1,3 @@
-// app/marketing/pending/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,6 +7,7 @@ import SocialPostCard from "@/components/marketing/SocialPostCard";
 import ApprovalButtons from "@/components/marketing/ApprovalButtons";
 import EmptyState from "@/components/EmptyState";
 import { MarketingPostsSkeleton } from "@/components/Skeleton";
+import { useLocale } from "@/components/LocaleProvider";
 
 interface SocialPost {
   id: string;
@@ -21,6 +21,7 @@ interface SocialPost {
 
 export default function PendingPostsPage() {
   const { data: session } = useSession();
+  const { t } = useLocale();
   const isAdmin = session?.user?.role === "ADMIN";
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +40,7 @@ export default function PendingPostsPage() {
       );
 
       if (!response.ok) {
-        throw new Error("Error fetching pending posts");
+        throw new Error("fetch_error");
       }
 
       const data = await response.json();
@@ -48,7 +49,7 @@ export default function PendingPostsPage() {
       setError(null);
     } catch (err) {
       console.error("Error:", err);
-      setError("Error al cargar posts pendientes");
+      setError(t("marketing.loadError"));
     } finally {
       setLoading(false);
     }
@@ -64,11 +65,11 @@ export default function PendingPostsPage() {
         setPosts((prev) => prev.filter((p) => p.id !== postId));
         setTotalCount((prev) => Math.max(0, prev - 1));
       } else {
-        setError("Error al aprobar post");
+        setError(t("marketing.approveError"));
       }
     } catch (err) {
       console.error("Error:", err);
-      setError("Error al aprobar post");
+      setError(t("marketing.approveError"));
     }
   }
 
@@ -84,11 +85,11 @@ export default function PendingPostsPage() {
         setPosts((prev) => prev.filter((p) => p.id !== postId));
         setTotalCount((prev) => Math.max(0, prev - 1));
       } else {
-        setError("Error al rechazar post");
+        setError(t("marketing.rejectError"));
       }
     } catch (err) {
       console.error("Error:", err);
-      setError("Error al rechazar post");
+      setError(t("marketing.rejectError"));
     }
   }
 
@@ -100,11 +101,9 @@ export default function PendingPostsPage() {
     <div className="page-pad">
       <header className="page-head">
         <div>
-          <h1>Pendientes de aprobación</h1>
+          <h1>{t("marketing.pendingTitle")}</h1>
           <p className="page-sub">
-            {isAdmin
-              ? "Revisa y aprueba el contenido antes de publicar"
-              : "Tus posts enviados a revisión"}
+            {isAdmin ? t("marketing.pendingAdmin") : t("marketing.pendingUser")}
           </p>
         </div>
         <span className="marketing-count-badge">{totalCount}</span>
@@ -116,9 +115,9 @@ export default function PendingPostsPage() {
         <EmptyState
           className="empty-state-card--wide"
           icon="marketing"
-          title="Sin posts pendientes"
-          description="Todo revisado. Crea nuevo contenido cuando quieras."
-          actionLabel="Crear contenido"
+          title={t("marketing.emptyPending")}
+          description={t("marketing.emptyPendingDesc")}
+          actionLabel={t("marketing.createContent")}
           actionHref="/marketing/create"
         />
       ) : (

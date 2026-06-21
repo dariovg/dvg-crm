@@ -5,6 +5,7 @@ import { useState } from "react";
 import { createTeamUser, updateTeamUser } from "@/app/actions";
 
 const ROLES = [
+  { id: "COMMERCIAL", label: "Comercial" },
   { id: "MEMBER", label: "Equipo" },
   { id: "MANAGER", label: "Manager" },
   { id: "MARKETING", label: "Marketing" },

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth-options";
 import { getPlatformLimit } from "@/lib/social/platform-limits.js";
+import { notifyAdminsMarketingPending } from "@/lib/notifications";
 
 export async function POST(request: NextRequest) {
   try {
@@ -58,6 +59,8 @@ export async function POST(request: NextRequest) {
         approvals: true,
       },
     });
+
+    await notifyAdminsMarketingPending(post);
 
     return NextResponse.json(post, { status: 201 });
   } catch (error) {
