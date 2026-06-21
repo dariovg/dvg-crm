@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { CONTACT_STATUSES } from "@/lib/constants";
 import { getAuthSession, listTeamUsers } from "@/lib/auth-server";
 import { taskScope, isStaff } from "@/lib/permissions";
 import { taskDueStatus } from "@/lib/crm-utils";
-import TaskList from "@/components/TaskList";
+import TasksPageView from "@/components/TasksPageView";
 
 export default async function TasksPage() {
   const session = await getAuthSession();
@@ -30,42 +31,15 @@ export default async function TasksPage() {
   );
 
   return (
-    <>
-      <h1 className="page-title">Tareas</h1>
-      <p className="page-lead">
-        {pending.length} pendientes · {done.length} completadas
-        {staff ? " · Vista global" : " · Asignadas a ti"}
-      </p>
-
-      {overdue.length > 0 && (
-        <>
-          <h2 className="section-title section-title--danger">
-            Vencidas ({overdue.length})
-          </h2>
-          <TaskList tasks={overdue} team={team} isAdmin={staff} />
-        </>
-      )}
-      {dueToday.length > 0 && (
-        <>
-          <h2 className="section-title section-title--warn">
-            Vencen hoy ({dueToday.length})
-          </h2>
-          <TaskList tasks={dueToday} team={team} isAdmin={staff} />
-        </>
-      )}
-      {other.length > 0 && (
-        <>
-          <h2 className="section-title">Próximas ({other.length})</h2>
-          <TaskList tasks={other} team={team} isAdmin={staff} />
-        </>
-      )}
-      {done.length > 0 && (
-        <>
-          <h2 className="section-title">Completadas ({done.length})</h2>
-          <TaskList tasks={done} team={team} isAdmin={staff} />
-        </>
-      )}
-      {!tasks.length && <TaskList tasks={[]} team={team} isAdmin={staff} />}
-    </>
+    <TasksPageView
+      overdue={overdue}
+      dueToday={dueToday}
+      other={other}
+      done={done}
+      team={team}
+      staff={staff}
+      pendingCount={pending.length}
+      doneCount={done.length}
+    />
   );
 }

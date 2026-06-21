@@ -5,6 +5,7 @@ import { contactScope, isStaff } from "@/lib/permissions";
 import { getScoringRules } from "@/lib/crm-settings";
 import { withLeadScores } from "@/lib/lead-score";
 import PipelineBoard from "@/components/PipelineBoard";
+import PipelinePageHeader from "@/components/PipelinePageHeader";
 
 export default async function PipelinePage() {
   const session = await getAuthSession();
@@ -29,11 +30,7 @@ export default async function PipelinePage() {
 
   return (
     <>
-      <h1 className="page-title">Pipeline</h1>
-      <p className="page-lead">
-        Arrastra tarjetas entre columnas o pulsa para ver detalle.
-        {isStaff(session) ? "" : " Solo tus leads asignados."}
-      </p>
+      <PipelinePageHeader staff={isStaff(session)} />
       <PipelineBoard
         columns={columns}
         lostContacts={lost}

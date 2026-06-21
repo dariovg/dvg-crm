@@ -4,6 +4,8 @@ import { getAuthSession } from "@/lib/auth-server";
 import { contactScope, taskScope, isStaff } from "@/lib/permissions";
 import { audienceRoles } from "@/lib/team-calendar";
 import CalendarView from "@/components/CalendarView";
+import CalendarPageHeader from "@/components/CalendarPageHeader";
+import CalendarLoading from "@/components/CalendarLoading";
 
 function startOfWeekFromParam(weekParam) {
   const base = weekParam ? new Date(`${weekParam}T12:00:00`) : new Date();
@@ -68,11 +70,8 @@ export default async function CalendarPage({ searchParams }) {
 
   return (
     <>
-      <h1 className="page-title">Calendario</h1>
-      <p className="page-lead">
-        Citas con leads, tareas y eventos de equipo · recibirás alertas en la campana
-      </p>
-      <Suspense fallback={<p>Cargando calendario…</p>}>
+      <CalendarPageHeader />
+      <Suspense fallback={<CalendarLoading />}>
         <CalendarView
           tasks={tasks}
           meetings={meetings}

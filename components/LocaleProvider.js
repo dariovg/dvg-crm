@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { defaultLocale, LOCALE_STORAGE_KEY, t as translate } from "@/lib/i18n";
 
 const LocaleContext = createContext({
@@ -35,6 +36,7 @@ export function applyLocale(locale) {
 }
 
 export default function LocaleProvider({ children }) {
+  const router = useRouter();
   const [locale, setLocaleState] = useState(defaultLocale);
   const [mounted, setMounted] = useState(false);
 
@@ -54,11 +56,15 @@ export default function LocaleProvider({ children }) {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const setLocale = useCallback((next) => {
-    if (next !== "es" && next !== "en") return;
-    setLocaleState(next);
-    applyLocale(next);
-  }, []);
+  const setLocale = useCallback(
+    (next) => {
+      if (next !== "es" && next !== "en") return;
+      setLocaleState(next);
+      applyLocale(next);
+      router.refresh();
+    },
+    [router]
+  );
 
   const t = useCallback(
     (key, vars) => translate(key, mounted ? locale : defaultLocale, vars),

@@ -4,6 +4,7 @@ import EmptyState from "@/components/EmptyState";
 import TaskRemindersBanner from "@/components/TaskRemindersBanner";
 import Accordion from "@/components/Accordion";
 import { t, navLabel } from "@/lib/i18n";
+import { contactStatusLabel } from "@/lib/i18n-labels";
 
 const QUICK_LINKS = [
   { href: "/leads", key: "/leads" },
@@ -166,7 +167,7 @@ export default function DashboardView({
                   prev && prev > 0 ? Math.round((f.count / prev) * 100) : null;
                 return (
                   <li key={f.id} className="funnel-step">
-                    <span className="funnel-label">{f.label}</span>
+                    <span className="funnel-label">{contactStatusLabel(f.id, locale)}</span>
                     <div className="funnel-bar-track">
                       <div
                         className="funnel-bar-fill"
@@ -188,7 +189,7 @@ export default function DashboardView({
                 .filter((s) => s.id !== "LOST")
                 .map((s) => (
                   <li key={s.id}>
-                    <span className="pipeline-bars-label">{s.label}</span>
+                    <span className="pipeline-bars-label">{contactStatusLabel(s.id, locale)}</span>
                     <div className="pipeline-bars-track">
                       <div
                         className="pipeline-bars-fill"

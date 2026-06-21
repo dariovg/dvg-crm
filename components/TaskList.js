@@ -6,7 +6,8 @@ import { useState } from "react";
 import { toggleTask, updateTask, deleteTask } from "@/app/actions";
 import AssigneeBadge from "@/components/AssigneeBadge";
 import EmptyState from "@/components/EmptyState";
-import { TASK_PRIORITIES } from "@/lib/constants";
+import { useLocale } from "@/components/LocaleProvider";
+import { taskPriorityLabel, taskPrioritiesForLocale } from "@/lib/i18n-labels";
 import { taskDueStatus, dueLabel } from "@/lib/crm-utils";
 
 function priorityClass(p) {
@@ -22,16 +23,17 @@ function rowDueClass(dueAt, done) {
   return "";
 }
 
-function TaskRowContent({ t, isAdmin, team, showContact, onEdit, onRemove }) {
+function TaskRowContent({ t, isAdmin, team, showContact, onEdit, onRemove, locale, labels }) {
   const due = taskDueStatus(t.dueAt, t.done);
   const badge = dueLabel(due);
+  const dateLocale = locale === "en" ? "en-GB" : "es-ES";
 
   return (
     <>
       <label>
         {t.title}{" "}
         <span className={`priority-pill ${priorityClass(t.priority)}`}>
-          {TASK_PRIORITIES.find((p) => p.id === t.priority)?.label || "Media"}
+          {taskPriorityLabel(t.priority, locale)}
         </span>
         {t.recurDays ? (
           <span className="recur-pill">↻ {t.recurDays}d</span>
@@ -42,7 +44,7 @@ function TaskRowContent({ t, isAdmin, team, showContact, onEdit, onRemove }) {
       )}
       {t.dueAt && (
         <small className={rowDueClass(t.dueAt, t.done)}>
-          {new Date(t.dueAt).toLocaleString("es-ES")}
+          {new Date(t.dueAt).toLocaleString(dateLocale)}
         </small>
       )}
       {t.assignee && <AssigneeBadge user={t.assignee} />}
@@ -51,10 +53,10 @@ function TaskRowContent({ t, isAdmin, team, showContact, onEdit, onRemove }) {
       )}
       <div className="task-actions">
         <button type="button" className="btn-sm btn-ghost" onClick={onEdit}>
-          Editar
+          {labels.edit}
         </button>
         <button type="button" className="btn-sm btn-danger" onClick={onRemove}>
-          Borrar
+          {labels.delete}
         </button>
       </div>
     </>
@@ -69,6 +71,8 @@ export default function TaskList({
   showContact = true,
 }) {
   const router = useRouter();
+  const { locale, t } = useLocale();
+  const priorities = taskPrioritiesForLocale(locale);
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDue, setEditDue] = useState("");
@@ -98,7 +102,7 @@ export default function TaskList({
   }
 
   async function remove(taskId) {
-    if (!confirm("¿Eliminar esta tarea?")) return;
+    if (!confirm(t("page.tasks.deleteConfirm"))) return;
     await deleteTask(taskId);
     router.refresh();
   }
@@ -133,7 +137,7 @@ export default function TaskList({
                 onChange={(e) => setEditPriority(e.target.value)}
                 className="task-edit-input"
               >
-                {TASK_PRIORITIES.map((p) => (
+                {priorities.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.label}
                   </option>
@@ -142,7 +146,7 @@ export default function TaskList({
               <input
                 type="number"
                 min="1"
-                placeholder="Repetir días"
+                placeholder={t("page.tasks.recurPlaceholder")}
                 value={editRecur}
                 onChange={(e) => setEditRecur(e.target.value)}
                 className="task-edit-input"
@@ -153,7 +157,7 @@ export default function TaskList({
                   onChange={(e) => setEditAssignee(e.target.value)}
                   className="task-edit-input"
                 >
-                  <option value="">Sin asignar</option>
+                  <option value="">{t("common.unassigned")}</option>
                   {team.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name || u.email}
@@ -162,14 +166,14 @@ export default function TaskList({
                 </select>
               )}
               <button type="button" className="btn-sm" onClick={() => saveEdit(t.id)}>
-                Guardar
+                {t("page.tasks.save")}
               </button>
               <button
                 type="button"
                 className="btn-sm btn-ghost"
                 onClick={() => setEditingId(null)}
               >
-                Cancelar
+                {t("page.tasks.cancel")}
               </button>
             </div>
           ) : (
@@ -178,6 +182,11 @@ export default function TaskList({
               isAdmin={isAdmin}
               team={team}
               showContact={showContact}
+              locale={locale}
+              labels={{
+                edit: t("page.tasks.edit"),
+                delete: t("page.tasks.delete"),
+              }}
               onEdit={() => startEdit(t)}
               onRemove={() => remove(t.id)}
             />
@@ -187,11 +196,11 @@ export default function TaskList({
       {!tasks.length && (
         <EmptyState
           icon="tasks"
-          title="Sin tareas"
+          title={t("page.tasks.emptyTitle")}
           description={
             isAdmin
-              ? "Crea una tarea para organizar el seguimiento comercial."
-              : "No tienes tareas asignadas por ahora."
+              ? t("page.tasks.emptyAdmin")
+              : t("page.tasks.emptyMember")
           }
         />
       )}

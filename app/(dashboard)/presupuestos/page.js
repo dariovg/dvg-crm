@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { fetchScopedQuotes } from "@/app/actions";
 import QuotesList from "@/components/QuotesList";
+import QuotesPageHeader from "@/components/QuotesPageHeader";
 import { getAuthSession } from "@/lib/auth-server";
 import { isAdmin, isStaff } from "@/lib/permissions";
 
@@ -19,50 +19,13 @@ export default async function PresupuestosPage({ searchParams }) {
 
   return (
     <>
-      <h1 className="page-title">Presupuestos</h1>
-      <p className="page-lead">
-        {quotes.length} presupuestos
-        {staff ? " · Vista global" : " · Tus leads y presupuestos"}
-        {admin && pendingCount > 0 && (
-          <> · <strong>{pendingCount} pendientes de aprobación</strong></>
-        )}
-      </p>
-
-      <div className="quote-filters">
-        <Link
-          href="/presupuestos"
-          className={`filter-chip${!statusFilter ? " filter-chip--active" : ""}`}
-        >
-          Todos
-        </Link>
-        <Link
-          href="/presupuestos?status=DRAFT"
-          className={`filter-chip${statusFilter === "DRAFT" ? " filter-chip--active" : ""}`}
-        >
-          Borradores
-        </Link>
-        {admin && (
-          <Link
-            href="/presupuestos?status=PENDING_APPROVAL"
-            className={`filter-chip${statusFilter === "PENDING_APPROVAL" ? " filter-chip--active" : ""}`}
-          >
-            Pendientes ({pendingCount})
-          </Link>
-        )}
-        <Link
-          href="/presupuestos?status=SENT"
-          className={`filter-chip${statusFilter === "SENT" ? " filter-chip--active" : ""}`}
-        >
-          Enviados
-        </Link>
-        <Link
-          href="/presupuestos?status=ACCEPTED"
-          className={`filter-chip${statusFilter === "ACCEPTED" ? " filter-chip--active" : ""}`}
-        >
-          Aceptados
-        </Link>
-      </div>
-
+      <QuotesPageHeader
+        count={quotes.length}
+        staff={staff}
+        admin={admin}
+        pendingCount={pendingCount}
+        statusFilter={statusFilter}
+      />
       <QuotesList quotes={quotes} isAdmin={admin} canDelete={staff} />
     </>
   );

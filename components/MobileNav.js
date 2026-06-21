@@ -167,7 +167,7 @@ export function BottomTabBar({ onMoreClick }) {
       ))}
       <button
         type="button"
-        className={`bottom-tab${pathname.startsWith("/calendar") || pathname.startsWith("/presupuestos") || pathname.startsWith("/admin") || pathname.startsWith("/marketing") || pathname.startsWith("/leads/import") ? " bottom-tab--active" : ""}`}
+        className={`bottom-tab${pathname.startsWith("/calendar") || pathname.startsWith("/presupuestos") || pathname.startsWith("/admin") || pathname.startsWith("/marketing") ? " bottom-tab--active" : ""}`}
         onClick={onMoreClick}
       >
         <NavIcon name="more" />

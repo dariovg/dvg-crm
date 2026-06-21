@@ -8,7 +8,8 @@ import StatusBadge from "@/components/StatusBadge";
 import AssigneeBadge from "@/components/AssigneeBadge";
 import LeadScoreBadge from "@/components/LeadScoreBadge";
 import EmptyState from "@/components/EmptyState";
-import { SOURCE_LABEL, CONTACT_STATUSES } from "@/lib/constants";
+import { useLocale } from "@/components/LocaleProvider";
+import { contactStatusesForLocale, sourceLabelsForLocale, sourceLabel } from "@/lib/i18n-labels";
 
 const STORAGE_KEY = "dvg-crm-saved-filters";
 
@@ -24,6 +25,9 @@ function readSaved() {
 export default function LeadsFilters({ team, canAssign }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { locale, t } = useLocale();
+  const statuses = contactStatusesForLocale(locale);
+  const sources = sourceLabelsForLocale(locale);
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState([]);
   const [saveName, setSaveName] = useState("");
@@ -74,7 +78,7 @@ export default function LeadsFilters({ team, canAssign }) {
         <input
           type="search"
           className="filter-input"
-          placeholder="Buscar nombre, email, empresa…"
+          placeholder={t("page.leads.searchPlaceholder")}
           defaultValue={searchParams.get("q") || ""}
           onKeyDown={(e) => {
             if (e.key === "Enter") setParam("q", e.target.value.trim());
@@ -86,8 +90,8 @@ export default function LeadsFilters({ team, canAssign }) {
           onChange={(e) => setParam("status", e.target.value)}
           disabled={pending}
         >
-          <option value="">Todos los estados</option>
-          {CONTACT_STATUSES.map((s) => (
+          <option value="">{t("page.leads.allStatuses")}</option>
+          {statuses.map((s) => (
             <option key={s.id} value={s.id}>
               {s.label}
             </option>
@@ -99,8 +103,8 @@ export default function LeadsFilters({ team, canAssign }) {
           onChange={(e) => setParam("source", e.target.value)}
           disabled={pending}
         >
-          <option value="">Todos los orígenes</option>
-          {Object.entries(SOURCE_LABEL).map(([id, label]) => (
+          <option value="">{t("page.leads.allSources")}</option>
+          {sources.map(({ id, label }) => (
             <option key={id} value={id}>
               {label}
             </option>
@@ -113,8 +117,8 @@ export default function LeadsFilters({ team, canAssign }) {
             onChange={(e) => setParam("assignee", e.target.value)}
             disabled={pending}
           >
-            <option value="">Todos (asignación)</option>
-            <option value="none">Sin asignar</option>
+            <option value="">{t("page.leads.allAssignees")}</option>
+            <option value="none">{t("page.leads.unassigned")}</option>
             {team.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.name || u.email}
@@ -141,12 +145,12 @@ export default function LeadsFilters({ team, canAssign }) {
         ))}
         <input
           className="saved-filter-name"
-          placeholder="Nombre vista…"
+          placeholder={t("page.leads.filterNamePlaceholder")}
           value={saveName}
           onChange={(e) => setSaveName(e.target.value)}
         />
         <button type="button" className="btn-sm btn-ghost" onClick={saveCurrent}>
-          Guardar filtros
+          {t("page.leads.saveFilters")}
         </button>
       </div>
     </div>
@@ -155,6 +159,7 @@ export default function LeadsFilters({ team, canAssign }) {
 
 export function LeadsTable({ contacts, team, canAssign, canDelete = false }) {
   const router = useRouter();
+  const { locale } = useLocale();
   const [selected, setSelected] = useState([]);
   const [bulkAssignee, setBulkAssignee] = useState("");
   const [deletingId, setDeletingId] = useState(null);
@@ -312,7 +317,7 @@ export function LeadsTable({ contacts, team, canAssign, canDelete = false }) {
             <div className="lead-card-meta">
               {c.dealValue && <span>{c.dealValue} €</span>}
               {c.leadScore != null && <LeadScoreBadge score={c.leadScore} />}
-              <span>{SOURCE_LABEL[c.source] || c.source}</span>
+              <span>{sourceLabel(c.source, locale)}</span>
               <span>{new Date(c.createdAt).toLocaleDateString("es-ES")}</span>
             </div>
             {c.tags?.length > 0 && (
@@ -426,7 +431,7 @@ export function LeadsTable({ contacts, team, canAssign, canDelete = false }) {
                 <td>
                   <StatusBadge status={c.status} />
                 </td>
-                <td>{SOURCE_LABEL[c.source] || c.source}</td>
+                <td>{sourceLabel(c.source, locale)}</td>
                 {canAssign && (
                   <td>
                     <select

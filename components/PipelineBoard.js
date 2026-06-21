@@ -6,7 +6,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { updateContactStatus } from "@/app/actions";
 import AssigneeBadge from "@/components/AssigneeBadge";
 import LeadScoreBadge from "@/components/LeadScoreBadge";
-import { SOURCE_LABEL } from "@/lib/constants";
+import { useLocale } from "@/components/LocaleProvider";
+import {
+  contactStatusLabel,
+  contactStatusesForLocale,
+  sourceLabel,
+} from "@/lib/i18n-labels";
 
 function cloneBoard(columns, lost) {
   return {
@@ -72,6 +77,8 @@ function PipelineCard({
   onDragStart,
   onDragEnd,
   onMoveSelect,
+  locale,
+  labels,
 }) {
   return (
     <div
@@ -104,8 +111,10 @@ function PipelineCard({
         <div className="pipeline-card-detail">
           {contact.phone && <p>📞 {contact.phone}</p>}
           {contact.company && <p>🏢 {contact.company}</p>}
-          <p>{SOURCE_LABEL[contact.source] || contact.source}</p>
-          {contact.interest && <p>Interés: {contact.interest}</p>}
+          <p>{sourceLabel(contact.source, locale) || contact.source}</p>
+          {contact.interest && (
+            <p>{labels.interest.replace("{value}", contact.interest)}</p>
+          )}
           {contact.notes && (
             <p className="pipeline-card-notes">
               {contact.notes.length > 120
@@ -114,7 +123,7 @@ function PipelineCard({
             </p>
           )}
           <Link href={`/leads/${contact.id}`} className="pipeline-card-link">
-            Ver ficha →
+            {labels.viewLead}
           </Link>
         </div>
       )}
@@ -123,11 +132,11 @@ function PipelineCard({
         value={contact.status}
         disabled={pending}
         onChange={(e) => onMoveSelect(contact.id, e.target.value)}
-        aria-label="Mover estado"
+        aria-label={labels.moveStatus}
         onClick={(e) => e.stopPropagation()}
       >
         {contact.status === "LOST" && (
-          <option value="LOST">Perdido</option>
+          <option value="LOST">{contactStatusLabel("LOST", locale)}</option>
         )}
         {statusOptions.map((s) => (
           <option key={s.id} value={s.id}>
@@ -146,6 +155,7 @@ export default function PipelineBoard({
   isStaff: staffView = true,
 }) {
   const router = useRouter();
+  const { locale, t } = useLocale();
   const [board, setBoard] = useState(() =>
     cloneBoard(initialColumns, initialLost)
   );
@@ -162,8 +172,18 @@ export default function PipelineBoard({
   }, [initialColumns, initialLost]);
 
   const statusOptions = useMemo(
-    () => (allStatuses || initialColumns).filter((s) => s.id !== "LOST"),
-    [allStatuses, initialColumns]
+    () =>
+      contactStatusesForLocale(locale).filter((s) => s.id !== "LOST"),
+    [locale]
+  );
+
+  const labels = useMemo(
+    () => ({
+      viewLead: t("page.pipeline.viewLead"),
+      interest: t("page.pipeline.interest"),
+      moveStatus: t("page.pipeline.moveStatus"),
+    }),
+    [t]
   );
 
   const showFeedback = useCallback((message, type = "error") => {
@@ -184,10 +204,7 @@ export default function PipelineBoard({
       if (!found || found.contact.status === status) return;
 
       if (status === "LOST") {
-        showFeedback(
-          "Para marcar como perdido, abre la ficha del lead y elige el motivo.",
-          "warn"
-        );
+        showFeedback(t("page.pipeline.lostReason"), "warn");
         return;
       }
 
@@ -202,12 +219,12 @@ export default function PipelineBoard({
         router.refresh();
       } catch (err) {
         setBoard(snapshotRef.current);
-        const msg = err?.message || "No se pudo mover el lead.";
+        const msg = err?.message || t("page.pipeline.moveError");
         showFeedback(
           msg === "No autorizado"
             ? staffView
-              ? "No tienes permiso para mover este lead."
-              : "Solo puedes mover leads asignados a ti."
+              ? t("page.pipeline.unauthorizedStaff")
+              : t("page.pipeline.unauthorizedMember")
             : msg
         );
       } finally {
@@ -215,7 +232,7 @@ export default function PipelineBoard({
         snapshotRef.current = null;
       }
     },
-    [board, router, showFeedback, staffView]
+    [board, router, showFeedback, staffView, t]
   );
 
   function onDragStart(e, contactId) {
@@ -250,7 +267,7 @@ export default function PipelineBoard({
       >
         <h3>
           <span className="pipeline-col-dot" data-status={col.id} />
-          {col.label}
+          {contactStatusLabel(col.id, locale)}
           <span className="pipeline-col-count">{col.contacts.length}</span>
         </h3>
         <div className="pipeline-col-body">
@@ -271,6 +288,8 @@ export default function PipelineBoard({
                 setOverCol(null);
               }}
               onMoveSelect={move}
+              locale={locale}
+              labels={labels}
             />
           ))}
         </div>
@@ -290,7 +309,7 @@ export default function PipelineBoard({
             type="button"
             className="pipeline-feedback-dismiss"
             onClick={() => setFeedback(null)}
-            aria-label="Cerrar"
+            aria-label={t("common.close")}
           >
             ×
           </button>
@@ -301,10 +320,8 @@ export default function PipelineBoard({
       </div>
       {board.lost.length > 0 && (
         <div className="card pipeline-lost">
-          <h2>Perdidos ({board.lost.length})</h2>
-          <p className="pipeline-lost-hint">
-            Arrastra de vuelta al pipeline o usa el selector para reactivar.
-          </p>
+          <h2>{t("page.pipeline.lostSection", { count: board.lost.length })}</h2>
+          <p className="pipeline-lost-hint">{t("page.pipeline.lostHint")}</p>
           <div className="pipeline pipeline-lost-grid">
             <div
               className={`pipeline-col${overCol === "LOST" ? " pipeline-col--over" : ""}`}
@@ -314,7 +331,7 @@ export default function PipelineBoard({
             >
               <h3>
                 <span className="pipeline-col-dot" data-status="LOST" />
-                Perdido
+                {contactStatusLabel("LOST", locale)}
                 <span className="pipeline-col-count">{board.lost.length}</span>
               </h3>
               <div className="pipeline-col-body">
@@ -335,6 +352,8 @@ export default function PipelineBoard({
                       setOverCol(null);
                     }}
                     onMoveSelect={move}
+                    locale={locale}
+                    labels={labels}
                   />
                 ))}
               </div>

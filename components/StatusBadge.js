@@ -1,4 +1,7 @@
-import { STATUS_LABEL } from "@/lib/constants";
+"use client";
+
+import { useLocale } from "@/components/LocaleProvider";
+import { contactStatusLabel } from "@/lib/i18n-labels";
 
 const colors = {
   NEW: "badge-new",
@@ -12,9 +15,10 @@ const colors = {
 };
 
 export default function StatusBadge({ status }) {
+  const { locale } = useLocale();
   return (
     <span className={`status-badge ${colors[status] || ""}`}>
-      {STATUS_LABEL[status] || status}
+      {contactStatusLabel(status, locale)}
     </span>
   );
 }

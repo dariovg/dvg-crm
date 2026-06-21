@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { getAuthSession } from "@/lib/auth-server";
 import {
   contactScope,
@@ -9,12 +8,14 @@ import {
   isCommercial,
 } from "@/lib/permissions";
 import { loadDashboardStats } from "@/lib/dashboard-stats";
+import { getServerLocale } from "@/lib/locale-server";
 import DashboardView from "@/components/DashboardView";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await getAuthSession();
+  const locale = await getServerLocale();
   const scope = contactScope(session);
   const staff = isStaff(session);
   const showTasks = canAccessTasksCalendar(session);
@@ -23,9 +24,6 @@ export default async function DashboardPage() {
   const taskScopeWhere = showTasks ? taskScope(session) : { id: "__none__" };
   const qScope = quoteScope(session);
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
-  const cookieStore = await cookies();
-  const locale = cookieStore.get("dvg-crm-locale")?.value === "en" ? "en" : "es";
 
   const data = await loadDashboardStats({
     scope,
