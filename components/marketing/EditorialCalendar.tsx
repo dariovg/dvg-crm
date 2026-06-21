@@ -31,6 +31,7 @@ const PLATFORM_SHORT: Record<string, string> = {
   LINKEDIN: "IN",
   INSTAGRAM: "IG",
   FACEBOOK: "FB",
+  YOUTUBE: "YT",
 };
 
 const STATUS_LABEL: Record<string, string> = {

@@ -48,6 +48,17 @@ export async function POST(
       );
     }
 
+    if (post.platform === "YOUTUBE" && !pickVideoUrl(post.mediaUrls, postId)) {
+      return NextResponse.json(
+        {
+          error:
+            "YouTube requiere un vídeo (.mp4). Súbelo o enlázalo en Vista domingo antes de publicar.",
+          manual: true,
+        },
+        { status: 400 }
+      );
+    }
+
     if (post.status === "FAILED") {
       post = await prisma.socialPost.update({
         where: { id: postId },

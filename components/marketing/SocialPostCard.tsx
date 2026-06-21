@@ -41,6 +41,7 @@ const platformColors: Record<string, string> = {
   INSTAGRAM: 'bg-pink-100 text-pink-800',
   FACEBOOK: 'bg-blue-50 text-blue-600',
   TIKTOK: 'bg-gray-900 text-white',
+  YOUTUBE: 'bg-red-600 text-white',
 };
 
 const platformIcons: Record<string, string> = {
@@ -49,6 +50,7 @@ const platformIcons: Record<string, string> = {
   INSTAGRAM: '📷',
   FACEBOOK: 'f',
   TIKTOK: '🎵',
+  YOUTUBE: '▶',
 };
 
 const statusBadges: Record<string, string> = {

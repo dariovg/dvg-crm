@@ -7,6 +7,16 @@ import {
 } from "@/lib/social/twitter.js";
 import { publishToTikTok } from "@/lib/social/tiktok.js";
 import { isTikTokConnected } from "@/lib/social/tiktok-connection.js";
+import { publishToLinkedIn } from "@/lib/social/linkedin.js";
+import {
+  isLinkedInAppConfigured,
+  isLinkedInConnected,
+} from "@/lib/social/linkedin-connection.js";
+import { publishToYouTube } from "@/lib/social/youtube.js";
+import {
+  isYouTubeAppConfigured,
+  isYouTubeConnected,
+} from "@/lib/social/youtube-connection.js";
 
 type PublishResult = {
   success: boolean;
@@ -94,10 +104,68 @@ export async function POST(request: NextRequest) {
   }
 
   if (platforms.includes("LINKEDIN")) {
-    results.LINKEDIN = {
-      success: false,
-      error: "LinkedIn API aún no configurada en el CRM.",
-    };
+    if (!isLinkedInAppConfigured()) {
+      results.LINKEDIN = {
+        success: false,
+        error:
+          "LinkedIn API no configurada. Añade LINKEDIN_CLIENT_ID y LINKEDIN_CLIENT_SECRET en Vercel.",
+      };
+    } else if (!(await isLinkedInConnected())) {
+      results.LINKEDIN = {
+        success: false,
+        error: "Conecta LinkedIn en Marketing → Conexiones.",
+      };
+    } else {
+      try {
+        const text = String(
+          content.linkedin || content.text || ""
+        ).trim();
+        const published = await publishToLinkedIn(text);
+        results.LINKEDIN = {
+          success: true,
+          tweetId: published.externalId,
+        };
+      } catch (error) {
+        results.LINKEDIN = {
+          success: false,
+          error: error instanceof Error ? error.message : "LinkedIn API error",
+        };
+      }
+    }
+  }
+
+  if (platforms.includes("YOUTUBE")) {
+    if (!isYouTubeAppConfigured()) {
+      results.YOUTUBE = {
+        success: false,
+        error:
+          "YouTube API no configurada. Añade GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en Vercel.",
+      };
+    } else if (!(await isYouTubeConnected())) {
+      results.YOUTUBE = {
+        success: false,
+        error: "Conecta YouTube en Marketing → Conexiones.",
+      };
+    } else {
+      try {
+        const videoUrl = content.videoUrl || content.video_url;
+        const published = await publishToYouTube({
+          content: content.youtube || content.text,
+          mediaUrls: videoUrl ? [videoUrl] : [],
+          postId: content.postId,
+        });
+        results.YOUTUBE = {
+          success: true,
+          tweetId: published.externalId,
+          url: published.url,
+        };
+      } catch (error) {
+        results.YOUTUBE = {
+          success: false,
+          error: error instanceof Error ? error.message : "YouTube API error",
+        };
+      }
+    }
   }
 
   return NextResponse.json({

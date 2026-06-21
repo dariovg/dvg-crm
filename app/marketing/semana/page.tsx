@@ -35,7 +35,7 @@ interface WeekPayload {
   message?: string;
 }
 
-const VIDEO_PLATFORMS = new Set(["INSTAGRAM", "TIKTOK", "LINKEDIN"]);
+const VIDEO_PLATFORMS = new Set(["INSTAGRAM", "TIKTOK", "LINKEDIN", "YOUTUBE"]);
 
 export default function MarketingWeekPage() {
   const { data: session } = useSession();

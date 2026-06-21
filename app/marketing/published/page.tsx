@@ -27,6 +27,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   TIKTOK: "TikTok",
   LINKEDIN: "LinkedIn",
   INSTAGRAM: "Instagram",
+  YOUTUBE: "YouTube",
 };
 
 export default function PublishedPostsPage() {

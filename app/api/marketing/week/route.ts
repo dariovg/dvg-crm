@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       posts: posts.length,
       pending: posts.filter((p) => p.status === "PENDING_APPROVAL").length,
       videoPlatforms: posts.filter((p) =>
-        ["INSTAGRAM", "TIKTOK", "LINKEDIN"].includes(p.platform)
+        ["INSTAGRAM", "TIKTOK", "LINKEDIN", "YOUTUBE"].includes(p.platform)
       ).length,
     },
   });

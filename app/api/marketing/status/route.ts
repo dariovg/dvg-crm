@@ -10,6 +10,19 @@ import {
   isTikTokAppConfigured,
   isTikTokConnected,
 } from "@/lib/social/tiktok-connection.js";
+import {
+  getLinkedInClientConfig,
+  getLinkedInConnection,
+  getLinkedInOrganizationUrn,
+  isLinkedInAppConfigured,
+  isLinkedInConnected,
+} from "@/lib/social/linkedin-connection.js";
+import {
+  getYouTubeClientConfig,
+  getYouTubeConnection,
+  isYouTubeAppConfigured,
+  isYouTubeConnected,
+} from "@/lib/social/youtube-connection.js";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -19,6 +32,10 @@ export async function GET() {
 
   const conn = await getTikTokConnection();
   const { redirectUri } = getTikTokClientConfig();
+  const linkedInConn = await getLinkedInConnection();
+  const { redirectUri: linkedInRedirectUri } = getLinkedInClientConfig();
+  const youtubeConn = await getYouTubeConnection();
+  const { redirectUri: youtubeRedirectUri } = getYouTubeClientConfig();
 
   return NextResponse.json({
     twitter: isTwitterConfigured(),
@@ -29,6 +46,23 @@ export async function GET() {
       scope: conn?.scope ?? null,
       expiresAt: conn?.expiresAt?.toISOString() ?? null,
       redirectUri,
+    },
+    linkedin: {
+      appConfigured: isLinkedInAppConfigured(),
+      connected: await isLinkedInConnected(),
+      openId: linkedInConn?.openId ?? null,
+      scope: linkedInConn?.scope ?? null,
+      expiresAt: linkedInConn?.expiresAt?.toISOString() ?? null,
+      redirectUri: linkedInRedirectUri,
+      organizationUrn: getLinkedInOrganizationUrn(),
+    },
+    youtube: {
+      appConfigured: isYouTubeAppConfigured(),
+      connected: await isYouTubeConnected(),
+      channelId: youtubeConn?.openId ?? null,
+      scope: youtubeConn?.scope ?? null,
+      expiresAt: youtubeConn?.expiresAt?.toISOString() ?? null,
+      redirectUri: youtubeRedirectUri,
     },
     configuredPlatforms: await listConfiguredPlatforms(),
   });

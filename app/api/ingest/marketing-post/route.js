@@ -10,11 +10,13 @@ const VALID_PLATFORMS = new Set([
   "TIKTOK",
   "LINKEDIN",
   "FACEBOOK",
+  "YOUTUBE",
 ]);
 
 function appendSourceNote(content, sourceUrl, newsTitle, platform) {
   // Guiones cortos: la fuente va en metadata del CRM, no en el copy publicado.
-  if (platform === "TWITTER" || platform === "TIKTOK") return content;
+  if (platform === "TWITTER" || platform === "TIKTOK" || platform === "YOUTUBE")
+    return content;
   if (!sourceUrl && !newsTitle) return content;
   const note = newsTitle
     ? `\n\n📰 ${newsTitle}${sourceUrl ? `\n${sourceUrl}` : ""}`

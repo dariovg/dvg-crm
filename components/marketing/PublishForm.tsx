@@ -25,8 +25,21 @@ const PLATFORMS: {
   { value: "LINKEDIN", label: "LinkedIn", icon: "💼", limit: 3000 },
   { value: "INSTAGRAM", label: "Instagram", icon: "📷", limit: 2200 },
   { value: "TIKTOK", label: "TikTok", icon: "🎵", limit: 150 },
+  { value: "YOUTUBE", label: "YouTube", icon: "▶", limit: 5000 },
   { value: "FACEBOOK", label: "Facebook", icon: "f", limit: 5000 },
 ];
+
+const PLATFORM_HINTS: Partial<Record<SocialPlatform, string>> = {
+  TWITTER:
+    "Noticias del día + clips verticales. Texto corto (280). Ideal: titular + enlace o gancho.",
+  TIKTOK:
+    "Solo vídeo vertical 9:16. Caption breve. Sube el .mp4 en Vista domingo.",
+  YOUTUBE:
+    "Solo vídeo vertical 9:16. 1ª línea = título del vídeo; resto = descripción. .mp4 en Vista domingo.",
+  INSTAGRAM:
+    "Solo vídeo o imagen vertical 9:16. Caption largo permitido (publicación manual por ahora).",
+  LINKEDIN: "Texto profesional. Vídeo/imagen pendiente de integración automática.",
+};
 
 interface Campaign {
   id: string;
@@ -156,6 +169,9 @@ export function PublishForm({
               </button>
             ))}
           </div>
+          {PLATFORM_HINTS[formData.platform] && (
+            <p className="field-hint mt-2">{PLATFORM_HINTS[formData.platform]}</p>
+          )}
         </div>
 
         <div>
