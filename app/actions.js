@@ -21,6 +21,8 @@ import {
   contactScope,
   isStaff,
   quoteScope,
+  canAccessFinance,
+  canAccessHr,
 } from "@/lib/permissions";
 import { notifyAssignment, sendMail, isMailConfigured } from "@/lib/mail";
 import { saveCrmSettings as persistCrmSettings, getScoringRules } from "@/lib/crm-settings";
@@ -46,6 +48,8 @@ import {
 } from "@/lib/quote-templates";
 import { generateShareToken } from "@/lib/quote-share";
 import { recordAudit } from "@/lib/audit";
+import { buildIncomeFromQuote } from "@/lib/finance-from-quote";
+import { parseEuroToCents } from "@/lib/finance-stats";
 import {
   notifyTeamCalendarEvent,
   EVENT_CATEGORIES,
@@ -675,7 +679,7 @@ export async function createTeamUser({ email, name, password, role }) {
   const session = await requireAdminSession();
   const normalized = email.trim().toLowerCase();
   if (!normalized || !password) throw new Error("Email y contraseña obligatorios");
-  if (!["MEMBER", "MANAGER", "MARKETING", "COMMERCIAL"].includes(role)) throw new Error("Rol no válido");
+  if (!["MEMBER", "MANAGER", "MARKETING", "COMMERCIAL", "ADMINISTRATION", "FINANCE"].includes(role)) throw new Error("Rol no válido");
 
   const existing = await prisma.user.findUnique({ where: { email: normalized } });
   if (existing) throw new Error("Ya existe ese email");
@@ -709,7 +713,7 @@ export async function updateTeamUser(userId, { name, role }) {
   const data = {};
   if (name?.trim()) data.name = name.trim();
   if (role) {
-    if (!["MEMBER", "MANAGER", "ADMIN", "MARKETING", "COMMERCIAL"].includes(role)) {
+    if (!["MEMBER", "MANAGER", "ADMIN", "MARKETING", "COMMERCIAL", "ADMINISTRATION", "FINANCE"].includes(role)) {
       throw new Error("Rol no válido");
     }
     data.role = role;
@@ -1582,6 +1586,267 @@ export async function deleteTeamCalendarEvent(eventId) {
   });
 
   revalidatePath("/calendar");
+  return { ok: true };
+}
+
+async function requireFinanceSession() {
+  const session = await requireAuthSession();
+  if (!canAccessFinance(session)) throw new Error("No autorizado");
+  return session;
+}
+
+async function requireHrSession() {
+  const session = await requireAuthSession();
+  if (!canAccessHr(session)) throw new Error("No autorizado");
+  return session;
+}
+
+function parseEntryDate(value) {
+  if (!value) throw new Error("Fecha obligatoria");
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) throw new Error("Fecha no válida");
+  return d;
+}
+
+export async function createFinanceEntry(data) {
+  const session = await requireFinanceSession();
+  const amount = parseEuroToCents(data.amount);
+  const type = data.type === "INCOME" ? "INCOME" : "EXPENSE";
+  const category = await prisma.financeCategory.findUnique({
+    where: { id: data.categoryId },
+  });
+  if (!category || category.type !== type) throw new Error("Categoría no válida");
+
+  const entry = await prisma.financeEntry.create({
+    data: {
+      type,
+      amount,
+      entryDate: parseEntryDate(data.entryDate),
+      description: data.description?.trim() || null,
+      recurring: !!data.recurring,
+      attachmentUrl: data.attachmentUrl?.trim() || null,
+      categoryId: category.id,
+      quoteId: data.quoteId || null,
+      contactId: data.contactId || null,
+      createdById: actorId(session),
+    },
+  });
+
+  await recordAudit({
+    userId: actorId(session),
+    action: "finance_entry.created",
+    entityType: "finance_entry",
+    entityId: entry.id,
+    summary: `${type === "INCOME" ? "Ingreso" : "Gasto"}: ${(amount / 100).toFixed(2)} €`,
+  });
+
+  revalidatePath("/ceo/finanzas");
+  return { ok: true, id: entry.id };
+}
+
+export async function updateFinanceEntry(entryId, data) {
+  const session = await requireFinanceSession();
+  const existing = await prisma.financeEntry.findUnique({ where: { id: entryId } });
+  if (!existing) throw new Error("Movimiento no encontrado");
+
+  const payload = {};
+  if (data.amount != null) payload.amount = parseEuroToCents(data.amount);
+  if (data.entryDate != null) payload.entryDate = parseEntryDate(data.entryDate);
+  if (data.description !== undefined) payload.description = data.description?.trim() || null;
+  if (data.recurring !== undefined) payload.recurring = !!data.recurring;
+  if (data.attachmentUrl !== undefined) payload.attachmentUrl = data.attachmentUrl?.trim() || null;
+  if (data.categoryId) {
+    const category = await prisma.financeCategory.findUnique({ where: { id: data.categoryId } });
+    if (!category || category.type !== existing.type) throw new Error("Categoría no válida");
+    payload.categoryId = category.id;
+  }
+
+  await prisma.financeEntry.update({ where: { id: entryId }, data: payload });
+
+  await recordAudit({
+    userId: actorId(session),
+    action: "finance_entry.updated",
+    entityType: "finance_entry",
+    entityId: entryId,
+    summary: `Movimiento actualizado (${existing.type})`,
+  });
+
+  revalidatePath("/ceo/finanzas");
+  return { ok: true };
+}
+
+export async function deleteFinanceEntry(entryId) {
+  const session = await requireFinanceSession();
+  const existing = await prisma.financeEntry.findUnique({ where: { id: entryId } });
+  if (!existing) throw new Error("Movimiento no encontrado");
+
+  await prisma.financeEntry.delete({ where: { id: entryId } });
+
+  await recordAudit({
+    userId: actorId(session),
+    action: "finance_entry.deleted",
+    entityType: "finance_entry",
+    entityId: entryId,
+    summary: `Movimiento eliminado (${existing.type})`,
+  });
+
+  revalidatePath("/ceo/finanzas");
+  return { ok: true };
+}
+
+export async function createIncomeFromQuote(quoteId) {
+  const session = await requireFinanceSession();
+  const quote = await prisma.quote.findUnique({
+    where: { id: quoteId },
+    include: {
+      contact: true,
+      lines: { orderBy: { sortOrder: "asc" } },
+    },
+  });
+  if (!quote) throw new Error("Presupuesto no encontrado");
+  if (quote.status !== "ACCEPTED") throw new Error("El presupuesto debe estar aceptado");
+
+  const existing = await prisma.financeEntry.findFirst({
+    where: { quoteId, type: "INCOME" },
+  });
+  if (existing) throw new Error("Ya existe un ingreso vinculado a este presupuesto");
+
+  const draft = buildIncomeFromQuote(quote, quote.lines);
+  const category = await prisma.financeCategory.findUnique({
+    where: { slug: draft.categorySlug },
+  });
+  if (!category) throw new Error("Categoría de ingreso no configurada. Ejecuta seed-finance-categories.");
+
+  const entry = await prisma.financeEntry.create({
+    data: {
+      type: "INCOME",
+      amount: draft.amount,
+      entryDate: draft.entryDate,
+      description: draft.description,
+      recurring: draft.recurring,
+      categoryId: category.id,
+      quoteId: quote.id,
+      contactId: quote.contactId,
+      createdById: actorId(session),
+    },
+  });
+
+  await recordAudit({
+    userId: actorId(session),
+    action: "finance_entry.from_quote",
+    entityType: "finance_entry",
+    entityId: entry.id,
+    summary: `Ingreso desde presupuesto ${quote.number}`,
+    payload: { quoteId, amount: draft.amount },
+  });
+
+  revalidatePath("/ceo/finanzas");
+  revalidatePath(`/presupuestos/${quoteId}`);
+  return { ok: true, id: entry.id, amount: draft.amount };
+}
+
+export async function createEmployeeProfile(data) {
+  const session = await requireHrSession();
+  const fullName = data.fullName?.trim();
+  if (!fullName) throw new Error("Nombre obligatorio");
+
+  if (data.userId) {
+    const linked = await prisma.employeeProfile.findUnique({ where: { userId: data.userId } });
+    if (linked) throw new Error("Ese usuario ya tiene ficha de empleado");
+  }
+
+  const monthlyCost =
+    data.monthlyCost != null && String(data.monthlyCost).trim() !== ""
+      ? parseEuroToCents(data.monthlyCost)
+      : null;
+
+  const employee = await prisma.employeeProfile.create({
+    data: {
+      fullName,
+      department: data.department?.trim() || null,
+      jobTitle: data.jobTitle?.trim() || null,
+      contractType: data.contractType?.trim() || null,
+      startDate: data.startDate ? parseEntryDate(data.startDate) : null,
+      endDate: data.endDate ? parseEntryDate(data.endDate) : null,
+      monthlyCost,
+      active: data.active !== false,
+      notes: data.notes?.trim() || null,
+      userId: data.userId || null,
+    },
+  });
+
+  await recordAudit({
+    userId: actorId(session),
+    action: "employee.created",
+    entityType: "employee_profile",
+    entityId: employee.id,
+    summary: `Empleado creado: ${fullName}`,
+  });
+
+  revalidatePath("/ceo/rrhh");
+  return { ok: true, id: employee.id };
+}
+
+export async function updateEmployeeProfile(employeeId, data) {
+  const session = await requireHrSession();
+  const existing = await prisma.employeeProfile.findUnique({ where: { id: employeeId } });
+  if (!existing) throw new Error("Empleado no encontrado");
+
+  const payload = {};
+  if (data.fullName?.trim()) payload.fullName = data.fullName.trim();
+  if (data.department !== undefined) payload.department = data.department?.trim() || null;
+  if (data.jobTitle !== undefined) payload.jobTitle = data.jobTitle?.trim() || null;
+  if (data.contractType !== undefined) payload.contractType = data.contractType?.trim() || null;
+  if (data.startDate !== undefined) payload.startDate = data.startDate ? parseEntryDate(data.startDate) : null;
+  if (data.endDate !== undefined) payload.endDate = data.endDate ? parseEntryDate(data.endDate) : null;
+  if (data.monthlyCost !== undefined) {
+    payload.monthlyCost =
+      data.monthlyCost != null && String(data.monthlyCost).trim() !== ""
+        ? parseEuroToCents(data.monthlyCost)
+        : null;
+  }
+  if (data.active !== undefined) payload.active = !!data.active;
+  if (data.notes !== undefined) payload.notes = data.notes?.trim() || null;
+  if (data.userId !== undefined) {
+    if (data.userId) {
+      const linked = await prisma.employeeProfile.findFirst({
+        where: { userId: data.userId, id: { not: employeeId } },
+      });
+      if (linked) throw new Error("Ese usuario ya tiene ficha de empleado");
+    }
+    payload.userId = data.userId || null;
+  }
+
+  await prisma.employeeProfile.update({ where: { id: employeeId }, data: payload });
+
+  await recordAudit({
+    userId: actorId(session),
+    action: "employee.updated",
+    entityType: "employee_profile",
+    entityId: employeeId,
+    summary: `Empleado actualizado: ${payload.fullName || existing.fullName}`,
+  });
+
+  revalidatePath("/ceo/rrhh");
+  return { ok: true };
+}
+
+export async function deleteEmployeeProfile(employeeId) {
+  const session = await requireHrSession();
+  const existing = await prisma.employeeProfile.findUnique({ where: { id: employeeId } });
+  if (!existing) throw new Error("Empleado no encontrado");
+
+  await prisma.employeeProfile.delete({ where: { id: employeeId } });
+
+  await recordAudit({
+    userId: actorId(session),
+    action: "employee.deleted",
+    entityType: "employee_profile",
+    entityId: employeeId,
+    summary: `Empleado eliminado: ${existing.fullName}`,
+  });
+
+  revalidatePath("/ceo/rrhh");
   return { ok: true };
 }
 

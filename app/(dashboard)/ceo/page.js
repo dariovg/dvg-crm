@@ -98,6 +98,11 @@ export default async function CeoDashboardPage() {
             </ul>
           </div>
         </div>
+        <p className="muted ceo-quick-links">
+          <Link href="/ceo/finanzas" className="text-link">Finanzas →</Link>
+          {" · "}
+          <Link href="/ceo/rrhh" className="text-link">RRHH →</Link>
+        </p>
       </section>
 
       <section className="ceo-section">

@@ -8,6 +8,8 @@ const ROLES = [
   { id: "COMMERCIAL", label: "Comercial" },
   { id: "MEMBER", label: "Equipo" },
   { id: "MANAGER", label: "Manager" },
+  { id: "ADMINISTRATION", label: "Administración" },
+  { id: "FINANCE", label: "Finanzas" },
   { id: "MARKETING", label: "Marketing" },
 ];
 

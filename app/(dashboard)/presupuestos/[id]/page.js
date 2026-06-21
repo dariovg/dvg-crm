@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import QuoteEditor from "@/components/QuoteEditor";
 import { getAuthSession } from "@/lib/auth-server";
-import { canAccessQuote, canEditQuote, canDeleteQuote, isAdmin } from "@/lib/permissions";
+import { canAccessQuote, canEditQuote, canDeleteQuote, isAdmin, canAccessFinance } from "@/lib/permissions";
 import Link from "next/link";
 
 export default async function QuoteDetailPage({ params }) {
@@ -21,6 +21,13 @@ export default async function QuoteDetailPage({ params }) {
 
   if (!quote || !canAccessQuote(session, quote)) notFound();
 
+  const existingFinanceEntry = canAccessFinance(session)
+    ? await prisma.financeEntry.findFirst({
+        where: { quoteId: id, type: "INCOME" },
+        select: { id: true, amount: true, entryDate: true },
+      })
+    : null;
+
   return (
     <>
       <p className="breadcrumb">
@@ -33,6 +40,8 @@ export default async function QuoteDetailPage({ params }) {
         isAdmin={isAdmin(session)}
         canEdit={canEditQuote(session, quote)}
         canDelete={canDeleteQuote(session)}
+        canManageFinance={canAccessFinance(session)}
+        existingFinanceEntry={existingFinanceEntry}
       />
     </>
   );

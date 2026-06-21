@@ -21,9 +21,16 @@ enum ContactStatus {
 enum UserRole {
   MARKETING
   ADMIN
+  ADMINISTRATION
+  FINANCE
   MANAGER
   MEMBER
   COMMERCIAL
+}
+
+enum FinanceEntryType {
+  EXPENSE
+  INCOME
 }
 
 enum TaskPriority {
@@ -110,6 +117,63 @@ model User {
   auditLogs            AuditLog[]
   sessions             UserSession[]
   teamCalendarEvents   TeamCalendarEvent[] @relation("TeamEventCreator")
+  financeEntriesCreated FinanceEntry[]     @relation("FinanceEntryCreator")
+  employeeProfile      EmployeeProfile?
+}
+
+model EmployeeProfile {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  fullName     String
+  department   String?
+  jobTitle     String?
+  contractType String?
+  startDate    DateTime?
+  endDate      DateTime?
+  monthlyCost  Int?
+  active       Boolean   @default(true)
+  notes        String?   @db.Text
+  userId       String?   @unique
+  user         User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([active])
+  @@index([department])
+}
+
+model FinanceCategory {
+  id        String           @id @default(cuid())
+  name      String
+  slug      String           @unique
+  type      FinanceEntryType
+  sortOrder Int              @default(0)
+  entries   FinanceEntry[]
+}
+
+model FinanceEntry {
+  id            String           @id @default(cuid())
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  type          FinanceEntryType
+  amount        Int
+  entryDate     DateTime
+  description   String?          @db.Text
+  recurring     Boolean          @default(false)
+  attachmentUrl String?
+  categoryId    String
+  category      FinanceCategory  @relation(fields: [categoryId], references: [id])
+  quoteId       String?
+  quote         Quote?           @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  contactId     String?
+  contact       Contact?         @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  createdById   String?
+  createdBy     User?            @relation("FinanceEntryCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([entryDate])
+  @@index([type])
+  @@index([categoryId])
+  @@index([quoteId])
+  @@index([contactId])
 }
 
 model AuditLog {
@@ -202,7 +266,8 @@ model Contact {
   meetings  Meeting[]
   tasks     Task[]
   surveys   SurveyResponse[]
-  quotes    Quote[]
+  quotes        Quote[]
+  financeEntries FinanceEntry[]
 
   @@index([email])
   @@index([status])
@@ -319,6 +384,7 @@ model Quote {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   lines           QuoteLine[]
+  financeEntries  FinanceEntry[]
 
   @@index([contactId])
   @@index([status])

@@ -9,6 +9,7 @@ import QuoteServicesPicker from "@/components/QuoteServicesPicker";
 import QuoteSharePanel from "@/components/QuoteSharePanel";
 import QuoteStatusBadge from "@/components/QuoteStatusBadge";
 import QuoteDeleteButton from "@/components/QuoteDeleteButton";
+import QuoteFinancePrompt from "@/components/QuoteFinancePrompt";
 import {
   saveQuote,
   approveQuote,
@@ -35,7 +36,14 @@ import {
   inferProjectTypeFromLines,
 } from "@/lib/quote-templates";
 
-export default function QuoteEditor({ quote, isAdmin, canEdit, canDelete = false }) {
+export default function QuoteEditor({
+  quote,
+  isAdmin,
+  canEdit,
+  canDelete = false,
+  canManageFinance = false,
+  existingFinanceEntry = null,
+}) {
   const router = useRouter();
   const readOnly = !canEdit || ["SENT", "ACCEPTED"].includes(quote.status);
   const showShare = ["SENT", "ACCEPTED"].includes(quote.status);
@@ -309,6 +317,14 @@ export default function QuoteEditor({ quote, isAdmin, canEdit, canDelete = false
         <div className="card quote-reject-note">
           <strong>Motivo de rechazo:</strong> {quote.approvalNote}
         </div>
+      )}
+
+      {canManageFinance && (
+        <QuoteFinancePrompt
+          quote={quote}
+          lines={lines}
+          existingEntry={existingFinanceEntry}
+        />
       )}
 
       {message && <p className="form-message">{message}</p>}

@@ -4,7 +4,7 @@ import {
   marketingModuleRedirect,
   marketingSalesRedirect,
   commercialRestrictedRedirect,
-  ceoDashboardRedirect,
+  ceoRouteRedirect,
 } from "@/lib/rbac-routes";
 
 export default withAuth(
@@ -33,7 +33,7 @@ export default withAuth(
       return NextResponse.next();
     }
 
-    const ceoDenied = ceoDashboardRedirect(role, pathname);
+    const ceoDenied = ceoRouteRedirect(role, pathname);
     if (ceoDenied) {
       return NextResponse.redirect(new URL(ceoDenied, req.url));
     }

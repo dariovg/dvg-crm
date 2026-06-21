@@ -5,6 +5,7 @@ import {
   marketingModuleRedirect,
   marketingSalesRedirect,
   commercialRestrictedRedirect,
+  ceoRouteRedirect,
   ceoDashboardRedirect,
   COMMERCIAL_BLOCKED_PREFIXES,
 } from "../lib/rbac-routes.js";
@@ -12,7 +13,10 @@ import {
   canAccessCommercialCrm,
   canAccessTasksCalendar,
   canAccessCeoDashboard,
+  canAccessFinance,
+  canAccessHr,
   isCommercial,
+  isAdministration,
 } from "../lib/permissions.js";
 
 test("sales paths incluyen módulos comerciales", () => {
@@ -54,10 +58,16 @@ test("COMMERCIAL no accede a tareas, calendario ni importación", () => {
   assert.equal(commercialRestrictedRedirect("ADMIN", "/calendar"), null);
 });
 
-test("solo ADMIN accede al panel CEO", () => {
+test("rutas CEO: panel, finanzas y RRHH", () => {
+  assert.equal(ceoRouteRedirect("ADMIN", "/ceo"), null);
+  assert.equal(ceoRouteRedirect("ADMIN", "/ceo/finanzas"), null);
+  assert.equal(ceoRouteRedirect("ADMIN", "/ceo/rrhh"), null);
+  assert.equal(ceoRouteRedirect("FINANCE", "/ceo/finanzas"), null);
+  assert.equal(ceoRouteRedirect("FINANCE", "/ceo"), "/ceo/finanzas");
+  assert.equal(ceoRouteRedirect("FINANCE", "/ceo/rrhh"), "/dashboard");
+  assert.equal(ceoRouteRedirect("MANAGER", "/ceo/finanzas"), "/dashboard");
+  assert.equal(ceoRouteRedirect("MANAGER", "/ceo"), "/dashboard");
   assert.equal(ceoDashboardRedirect("ADMIN", "/ceo"), null);
-  assert.equal(ceoDashboardRedirect("MANAGER", "/ceo"), "/dashboard");
-  assert.equal(ceoDashboardRedirect("COMMERCIAL", "/ceo"), "/dashboard");
 });
 
 test("permisos rol COMMERCIAL", () => {
@@ -66,4 +76,23 @@ test("permisos rol COMMERCIAL", () => {
   assert.ok(canAccessCommercialCrm(commercial));
   assert.ok(!canAccessTasksCalendar(commercial));
   assert.ok(!canAccessCeoDashboard(commercial));
+  assert.ok(!canAccessFinance(commercial));
+});
+
+test("permisos rol ADMINISTRATION (ops sin finanzas)", () => {
+  const adminOps = { user: { role: "ADMINISTRATION", id: "u2" } };
+  assert.ok(isAdministration(adminOps));
+  assert.ok(canAccessCommercialCrm(adminOps));
+  assert.ok(canAccessTasksCalendar(adminOps));
+  assert.ok(!canAccessCeoDashboard(adminOps));
+  assert.ok(!canAccessFinance(adminOps));
+  assert.ok(!canAccessHr(adminOps));
+});
+
+test("permisos rol FINANCE", () => {
+  const finance = { user: { role: "FINANCE", id: "u3" } };
+  assert.ok(canAccessFinance(finance));
+  assert.ok(!canAccessHr(finance));
+  assert.ok(!canAccessCeoDashboard(finance));
+  assert.ok(!canAccessCommercialCrm(finance));
 });

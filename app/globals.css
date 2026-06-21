@@ -4790,3 +4790,291 @@ body {
   );
   background-size: 200% 100%;
 }
+
+/* —— Finanzas / RRHH (ERP fase 1) —— */
+.finance-entry-form,
+.hr-employee-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 480px;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+@media (max-width: 640px) {
+  .field-row { grid-template-columns: 1fr; }
+}
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.finance-chart-panel { margin-bottom: 1rem; }
+.finance-chart {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  min-height: 180px;
+  padding-top: 0.5rem;
+}
+.finance-chart-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 52px;
+}
+.finance-chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 120px;
+  width: 100%;
+  justify-content: center;
+}
+.finance-bar {
+  width: 14px;
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+  transition: height 0.2s ease;
+}
+.finance-bar--income { background: #16a34a; }
+.finance-bar--expense { background: #dc2626; }
+.finance-chart-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+.finance-chart-net {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--navy);
+}
+.finance-chart-net--neg { color: #dc2626; }
+.finance-chart-legend {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+.finance-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+.finance-legend-dot--income { background: #16a34a; }
+.finance-legend-dot--expense { background: #dc2626; }
+.finance-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.finance-month-filter { margin: 0; min-width: 140px; }
+.finance-type-pill {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+}
+.finance-type-pill--income { background: #dcfce7; color: #166534; }
+.finance-type-pill--expense { background: #fee2e2; color: #991b1b; }
+.finance-recurring { margin-left: 0.25rem; color: var(--text-muted); }
+.quote-finance-prompt { margin-top: 1rem; border-color: rgba(22, 163, 74, 0.35); }
+.quote-finance-summary {
+  list-style: none;
+  margin: 0.75rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.quote-finance-summary li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.quote-finance-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.hr-status-pill {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+}
+.hr-status-pill--inactive {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.hr-user-link { font-size: 0.82rem; }
+.hr-actions { white-space: nowrap; }
+.ceo-quick-links { margin-top: 0.75rem; }
+
+/* —— Finanzas / RRHH (ERP fase 1) —— */
+.finance-entry-form,
+.hr-employee-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 480px;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+@media (max-width: 640px) {
+  .field-row { grid-template-columns: 1fr; }
+}
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.finance-chart-panel { margin-bottom: 1rem; }
+.finance-chart {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  min-height: 180px;
+  padding-top: 0.5rem;
+}
+.finance-chart-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 52px;
+}
+.finance-chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 120px;
+  width: 100%;
+  justify-content: center;
+}
+.finance-bar {
+  width: 14px;
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+  transition: height 0.2s ease;
+}
+.finance-bar--income { background: #16a34a; }
+.finance-bar--expense { background: #dc2626; }
+.finance-chart-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+.finance-chart-net {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--navy);
+}
+.finance-chart-net--neg { color: #dc2626; }
+.finance-chart-legend {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+.finance-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+.finance-legend-dot--income { background: #16a34a; }
+.finance-legend-dot--expense { background: #dc2626; }
+.finance-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.finance-month-filter { margin: 0; min-width: 140px; }
+.finance-type-pill {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+}
+.finance-type-pill--income { background: #dcfce7; color: #166534; }
+.finance-type-pill--expense { background: #fee2e2; color: #991b1b; }
+.finance-recurring { margin-left: 0.25rem; color: var(--text-muted); }
+.quote-finance-prompt { margin-top: 1rem; border-color: rgba(22, 163, 74, 0.35); }
+.quote-finance-summary {
+  list-style: none;
+  margin: 0.75rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.quote-finance-summary li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.quote-finance-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.hr-status-pill {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+}
+.hr-status-pill--inactive {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.hr-user-link { font-size: 0.82rem; }
+.hr-actions { white-space: nowrap; }
+.ceo-quick-links { margin-top: 0.75rem; }
