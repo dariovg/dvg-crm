@@ -10,7 +10,7 @@
     "db:push": "prisma db push",
     "db:seed": "node scripts/seed-admin.js",
     "postinstall": "prisma generate",
-    "test:unit": "node --test tests/**/*.test.mjs",
+    "test:unit": "node --experimental-test-module-mocks --test tests/**/*.test.mjs",
     "test:e2e": "playwright test",
     "test": "npm run test:unit && npm run test:e2e"
   },
