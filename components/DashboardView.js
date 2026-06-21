@@ -89,7 +89,7 @@ export default function DashboardView({
           <div className="ceo-kpi-card">
             <span className="ceo-kpi-label">{t("dashboard.kpi.pipelineValue", locale)}</span>
             <strong className="ceo-kpi-value">
-              {formatEuro(stats.dealValueTotal)}
+              {formatEuro(stats.dealValueTotal, locale)}
             </strong>
           </div>
           <div className="ceo-kpi-card">
@@ -207,6 +207,6 @@ export default function DashboardView({
   );
 }
 
-function formatEuro(amount) {
+function formatEuro(amount, locale) {
   return `€${Number(amount).toLocaleString(locale === "en" ? "en-GB" : "es-ES")}`;
 }
