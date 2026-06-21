@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import QuoteEditor from "@/components/QuoteEditor";
 import { getAuthSession } from "@/lib/auth-server";
-import { canAccessQuote, canEditQuote, isAdmin } from "@/lib/permissions";
+import { canAccessQuote, canEditQuote, canDeleteQuote, isAdmin } from "@/lib/permissions";
 import Link from "next/link";
 
 export default async function QuoteDetailPage({ params }) {
@@ -32,6 +32,7 @@ export default async function QuoteDetailPage({ params }) {
         quote={quote}
         isAdmin={isAdmin(session)}
         canEdit={canEditQuote(session, quote)}
+        canDelete={canDeleteQuote(session)}
       />
     </>
   );

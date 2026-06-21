@@ -63,7 +63,7 @@ export default async function PresupuestosPage({ searchParams }) {
         </Link>
       </div>
 
-      <QuotesList quotes={quotes} isAdmin={admin} />
+      <QuotesList quotes={quotes} isAdmin={admin} canDelete={staff} />
     </>
   );
 }

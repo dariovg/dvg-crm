@@ -106,6 +106,7 @@ export default async function LeadDetailPage({ params }) {
             contactId={contact.id}
             quotes={contact.quotes}
             isAdmin={isAdmin(session)}
+            canDelete={canDelete}
           />
 
           <div className="card">

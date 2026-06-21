@@ -8,6 +8,7 @@ import QuoteLineEditor from "@/components/QuoteLineEditor";
 import QuoteServicesPicker from "@/components/QuoteServicesPicker";
 import QuoteSharePanel from "@/components/QuoteSharePanel";
 import QuoteStatusBadge from "@/components/QuoteStatusBadge";
+import QuoteDeleteButton from "@/components/QuoteDeleteButton";
 import {
   saveQuote,
   approveQuote,
@@ -31,7 +32,7 @@ import {
   inferProjectTypeFromLines,
 } from "@/lib/quote-templates";
 
-export default function QuoteEditor({ quote, isAdmin, canEdit }) {
+export default function QuoteEditor({ quote, isAdmin, canEdit, canDelete = false }) {
   const router = useRouter();
   const readOnly = !canEdit || ["SENT", "ACCEPTED"].includes(quote.status);
   const showShare = ["SENT", "ACCEPTED"].includes(quote.status);
@@ -296,6 +297,22 @@ export default function QuoteEditor({ quote, isAdmin, canEdit }) {
       )}
 
       {message && <p className="form-message">{message}</p>}
+
+      {canDelete && (
+        <div className="card contact-editor-danger">
+          <h3>Zona de peligro</h3>
+          <p className="muted">
+            Elimina este presupuesto si se creó por error. No afecta al lead ni a otros presupuestos.
+          </p>
+          <QuoteDeleteButton
+            quoteId={quote.id}
+            quoteNumber={quote.number}
+            redirectTo={`/leads/${quote.contactId}`}
+            className="btn-danger"
+            label="Eliminar presupuesto"
+          />
+        </div>
+      )}
 
       <div className="quote-footer-actions">
         {canEdit && !readOnly && (

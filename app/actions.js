@@ -16,6 +16,7 @@ import {
   canEditQuote,
   canAccessSalesCrm,
   canDeleteContact,
+  canDeleteQuote,
   contactScope,
   isStaff,
   quoteScope,
@@ -1437,6 +1438,38 @@ export async function applyQuoteTemplate(quoteId, projectType) {
 
   revalidateQuotePaths(quoteId, quote.contactId);
   return { ok: true };
+}
+
+export async function deleteQuote(quoteId) {
+  const session = await requireStaffSession();
+  if (!canDeleteQuote(session)) throw new Error("Sin permiso");
+
+  const quote = await getQuoteForUser(session, quoteId);
+
+  await recordAudit({
+    userId: actorId(session),
+    action: "quote.deleted",
+    entityType: "quote",
+    entityId: quoteId,
+    summary: `Presupuesto eliminado: ${quote.number} (${quote.contact?.name || quote.contactId})`,
+    payload: { status: quote.status, contactId: quote.contactId },
+  });
+
+  await prisma.contactEvent.create({
+    data: {
+      contactId: quote.contactId,
+      type: "quote_deleted",
+      summary: `Presupuesto ${quote.number} eliminado`,
+      userId: actorId(session),
+    },
+  });
+
+  await prisma.quote.delete({ where: { id: quoteId } });
+
+  revalidatePath("/presupuestos");
+  revalidatePath(`/leads/${quote.contactId}`);
+  revalidatePath("/dashboard");
+  return { ok: true, contactId: quote.contactId };
 }
 
 export async function fetchScopedQuotes(filters = {}) {

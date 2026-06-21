@@ -1,22 +1,39 @@
 import Link from "next/link";
 import QuoteStatusBadge from "@/components/QuoteStatusBadge";
+import QuoteDeleteButton from "@/components/QuoteDeleteButton";
 import EmptyState from "@/components/EmptyState";
 import { computeQuoteTotalWithVat } from "@/lib/quotes";
 import { formatEuro } from "@/lib/pricing-catalog";
 
-export default function QuotesList({ quotes, showContact = true, isAdmin = false }) {
+export default function QuotesList({
+  quotes,
+  showContact = true,
+  isAdmin = false,
+  canDelete = false,
+  contactId,
+}) {
+  const newQuoteHref = contactId
+    ? `/presupuestos/nuevo?contactId=${contactId}`
+    : "/presupuestos/nuevo";
+
   if (!quotes.length) {
     return (
       <EmptyState
         className="empty-state-card--wide"
         icon="presupuestos"
         title="Sin presupuestos"
-        description="Crea el primer presupuesto para un lead del pipeline."
+        description={
+          contactId
+            ? "Crea el primer presupuesto para este lead."
+            : "Crea el primer presupuesto para un lead del pipeline."
+        }
         actionLabel="Nuevo presupuesto"
-        actionHref="/presupuestos/nuevo"
+        actionHref={newQuoteHref}
       />
     );
   }
+
+  const showActions = isAdmin || canDelete;
 
   return (
     <div className="table-wrap">
@@ -28,7 +45,7 @@ export default function QuotesList({ quotes, showContact = true, isAdmin = false
             <th>Estado</th>
             <th>Total</th>
             <th>Fecha</th>
-            {isAdmin && <th>Acciones</th>}
+            {showActions && <th className="th-actions">Acciones</th>}
           </tr>
         </thead>
         <tbody>
@@ -50,12 +67,18 @@ export default function QuotesList({ quotes, showContact = true, isAdmin = false
               </td>
               <td>{formatEuro(computeQuoteTotalWithVat(q, q.lines))}</td>
               <td>{new Date(q.createdAt).toLocaleDateString("es-ES")}</td>
-              {isAdmin && (
-                <td className="quote-actions-cell">
-                  {q.status === "PENDING_APPROVAL" && (
+              {showActions && (
+                <td className="quote-actions-cell td-actions">
+                  <Link href={`/presupuestos/${q.id}`} className="btn-link-sm">
+                    Abrir
+                  </Link>
+                  {isAdmin && q.status === "PENDING_APPROVAL" && (
                     <Link href={`/presupuestos/${q.id}`} className="btn-link-sm">
                       Revisar
                     </Link>
+                  )}
+                  {canDelete && (
+                    <QuoteDeleteButton quoteId={q.id} quoteNumber={q.number} />
                   )}
                 </td>
               )}
