@@ -734,6 +734,38 @@ export async function updateTeamUser(userId, { name, role }) {
   revalidatePath("/admin/users");
 }
 
+export async function updateUserProfile(payload) {
+  const session = await requireAuthSession();
+  const userId = session.user.id;
+  if (!userId || userId === "env-admin") {
+    throw new Error("Perfil no disponible en este entorno");
+  }
+
+  const { normalizePresenceStatus } = await import("@/lib/user-presence");
+  const data = {};
+
+  if (payload.name !== undefined) {
+    const name = String(payload.name || "").trim();
+    data.name = name || null;
+  }
+  if (payload.profileStatus !== undefined) {
+    data.profileStatus = normalizePresenceStatus(String(payload.profileStatus));
+  }
+  if (payload.statusMessage !== undefined) {
+    const msg = String(payload.statusMessage || "").trim();
+    data.statusMessage = msg || null;
+  }
+  if (payload.image !== undefined) {
+    data.image = payload.image || null;
+  }
+
+  if (!Object.keys(data).length) return;
+
+  await prisma.user.update({ where: { id: userId }, data });
+  revalidatePath("/profile");
+  revalidatePath("/equipo");
+}
+
 export async function fetchNotifications() {
   const session = await requireAuthSession();
   const userId = session.user.id;

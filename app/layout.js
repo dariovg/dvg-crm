@@ -9,8 +9,15 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: APP_PAGE_TITLE,
+  title: {
+    default: APP_PAGE_TITLE,
+    template: `%s | ${APP_PAGE_TITLE}`,
+  },
   description: APP_DESCRIPTION,
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
+  },
 };
 
 export default function RootLayout({ children }) {

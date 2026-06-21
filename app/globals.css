@@ -245,6 +245,188 @@ body {
   border-color: #fca5a5;
 }
 
+.user-menu-link {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-heading);
+  border-radius: 8px;
+  padding: .5rem .75rem;
+  font-size: .85rem;
+  font-weight: 600;
+  margin-bottom: .45rem;
+  text-decoration: none;
+}
+.user-menu-link:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+}
+.user-menu-status-msg {
+  font-size: .78rem;
+  color: var(--gray);
+  font-style: italic;
+}
+.user-menu-trigger .user-avatar {
+  flex-shrink: 0;
+}
+
+.user-avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--orange);
+  color: #fff;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.user-avatar-initials {
+  line-height: 1;
+}
+.user-avatar--status .user-avatar-status-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 28%;
+  min-width: 8px;
+  max-width: 14px;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  border: 2px solid var(--card-bg);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, .08);
+}
+
+.presence-pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: .15rem .45rem;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+}
+.presence-pill--remote { background: #eff6ff; color: #1d4ed8; }
+.presence-pill--busy { background: #fef2f2; color: #b91c1c; }
+.presence-pill--away { background: #fffbeb; color: #b45309; }
+.presence-pill--vacation { background: #faf5ff; color: #7e22ce; }
+
+.sidebar-user-link {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  text-decoration: none;
+  color: #fff;
+  margin-bottom: .45rem;
+}
+.sidebar-user-link:hover .sidebar-user-name { color: var(--orange); }
+.sidebar-user-name {
+  font-size: .82rem;
+  color: #e2e8f0;
+  word-break: break-word;
+}
+.sidebar-user-actions {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  margin-top: .35rem;
+}
+.sidebar-user-mini-link {
+  display: block;
+  text-align: center;
+  font-size: .78rem;
+  color: #cbd5e1;
+  text-decoration: none;
+  padding: .3rem .5rem;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 6px;
+}
+.sidebar-user-mini-link:hover {
+  color: #fff;
+  border-color: rgba(255,255,255,.35);
+}
+
+.profile-page { max-width: 560px; }
+.profile-card { padding: 1.25rem; }
+.profile-photo-block {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.profile-photo-label {
+  margin: 0 0 .5rem;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+.profile-upload-btn { cursor: pointer; }
+.profile-form .field + .field { margin-top: .85rem; }
+.profile-team-link { margin-top: 1rem; }
+.form-success {
+  color: #047857;
+  font-size: .88rem;
+  margin: .5rem 0 0;
+}
+
+.team-directory {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+.team-card {
+  display: flex;
+  gap: .85rem;
+  align-items: flex-start;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-bg);
+}
+.team-card--self {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 1px rgba(255, 107, 53, .15);
+}
+.team-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  min-width: 0;
+  flex: 1;
+}
+.team-card-body strong {
+  color: var(--text-heading);
+  font-size: .95rem;
+}
+.team-card-email {
+  font-size: .78rem;
+  color: var(--gray);
+  word-break: break-all;
+}
+.team-card-role { align-self: flex-start; }
+.team-card-status-msg {
+  margin: .15rem 0 0;
+  font-size: .82rem;
+  color: var(--gray);
+  font-style: italic;
+}
+.btn-sm {
+  padding: .35rem .65rem;
+  font-size: .78rem;
+}
+
 .app-main {
   flex: 1;
   padding: 1.5rem 2rem 2rem;

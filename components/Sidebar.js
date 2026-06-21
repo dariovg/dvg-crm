@@ -9,6 +9,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import LanguageToggle from "@/components/LanguageToggle";
 import NavIcon from "@/components/NavIcon";
 import BrandLogo from "@/components/BrandLogo";
+import UserAvatar from "@/components/UserAvatar";
 import { useLocale } from "@/components/LocaleProvider";
 import { navLabel } from "@/lib/i18n";
 
@@ -129,7 +130,20 @@ export default function Sidebar() {
         )}
         {session?.user && (
           <div className="sidebar-user">
-            <p>{session.user.name || session.user.email}</p>
+            <Link href="/profile" className="sidebar-user-link">
+              <UserAvatar
+                name={session.user.name}
+                email={session.user.email}
+                image={session.user.image}
+                profileStatus={session.user.profileStatus}
+                size={36}
+                showStatus
+                locale={locale}
+              />
+              <span className="sidebar-user-name">
+                {session.user.name || session.user.email}
+              </span>
+            </Link>
             <span
               className={`role-badge${isAdmin ? " role-badge--admin" : isManager ? " role-badge--manager" : role === "MARKETING" ? " role-badge--marketing" : isCommercial ? " role-badge--commercial" : ""}`}
             >
@@ -143,13 +157,18 @@ export default function Sidebar() {
                       ? t("role.commercial")
                       : t("role.member")}
             </span>
-            <button
-              type="button"
-              className="sidebar-signout-btn"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-            >
-              {t("auth.signOut")}
-            </button>
+            <div className="sidebar-user-actions">
+              <Link href="/equipo" className="sidebar-user-mini-link">
+                {t("profile.team")}
+              </Link>
+              <button
+                type="button"
+                className="sidebar-signout-btn"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+              >
+                {t("auth.signOut")}
+              </button>
+            </div>
           </div>
         )}
       </div>

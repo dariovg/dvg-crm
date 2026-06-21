@@ -86,11 +86,21 @@ enum TeamEventAudience {
   ADMINS
 }
 
+enum UserPresenceStatus {
+  AVAILABLE
+  REMOTE
+  BUSY
+  AWAY
+  VACATION
+}
+
 model User {
   id                   String    @id @default(cuid())
   email                String    @unique
   name                 String?
   image                String?
+  profileStatus        UserPresenceStatus @default(AVAILABLE)
+  statusMessage        String?
   passwordHash         String?
   role                 UserRole  @default(MEMBER)
   failedLoginAttempts  Int       @default(0)

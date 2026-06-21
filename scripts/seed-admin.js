@@ -8,6 +8,7 @@ const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 
 const prisma = new PrismaClient();
+const DEFAULT_ADMIN_NAME = "DVG CEO";
 
 async function main() {
   const email = (process.env.CRM_ADMIN_EMAIL || "info@dvgsstudio.com")
@@ -24,12 +25,12 @@ async function main() {
   const passwordHash = bcrypt.hashSync(plain, 12);
   const user = await prisma.user.upsert({
     where: { email },
-    update: { passwordHash, role: "ADMIN", name: "App Admin" },
+    update: { passwordHash, role: "ADMIN", name: DEFAULT_ADMIN_NAME },
     create: {
       email,
       passwordHash,
       role: "ADMIN",
-      name: "App Admin",
+      name: DEFAULT_ADMIN_NAME,
     },
   });
 
