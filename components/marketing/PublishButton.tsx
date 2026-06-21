@@ -36,7 +36,7 @@ export default function PublishButton({
 
       if (!res.ok) {
         const detail =
-          data.permanent === false && data.attempts
+          data.permanent === false && data.attempts && !/créditos|credits/i.test(data.error || "")
             ? ` (intento ${data.attempts}/3, se reintentará)`
             : "";
         throw new Error((data.error || "Error al publicar") + detail);
