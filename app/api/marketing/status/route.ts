@@ -75,6 +75,10 @@ export async function GET(request: NextRequest) {
     tiktok: {
       appConfigured: isTikTokAppConfigured(),
       connected: await safe("tiktok-connected", () => isTikTokConnected(), false),
+      needsOAuth: isTikTokAppConfigured(),
+      hint: isTikTokAppConfigured()
+        ? "API keys OK — pulsa Conectar para autorizar tu cuenta TikTok (una vez)"
+        : "Faltan TIKTOK_CLIENT_KEY y TIKTOK_CLIENT_SECRET en Vercel",
       openId: conn?.openId ?? null,
       scope: conn?.scope ?? null,
       expiresAt: conn?.expiresAt?.toISOString() ?? null,
@@ -83,6 +87,9 @@ export async function GET(request: NextRequest) {
     linkedin: {
       appConfigured: isLinkedInAppConfigured(),
       connected: await safe("linkedin-connected", () => isLinkedInConnected(), false),
+      hint: isLinkedInAppConfigured()
+        ? "API OK — pulsa Conectar para autorizar LinkedIn (una vez)"
+        : "Faltan LINKEDIN_CLIENT_ID y LINKEDIN_CLIENT_SECRET en Vercel",
       openId: linkedInConn?.openId ?? null,
       scope: linkedInConn?.scope ?? null,
       expiresAt: linkedInConn?.expiresAt?.toISOString() ?? null,
@@ -92,6 +99,10 @@ export async function GET(request: NextRequest) {
     youtube: {
       appConfigured: isYouTubeAppConfigured(),
       connected: await safe("youtube-connected", () => isYouTubeConnected(), false),
+      needsOAuth: isYouTubeAppConfigured(),
+      hint: isYouTubeAppConfigured()
+        ? "Google API OK — pulsa Conectar para autorizar tu canal YouTube (una vez)"
+        : "Faltan GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en Vercel",
       channelId: youtubeConn?.openId ?? null,
       scope: youtubeConn?.scope ?? null,
       expiresAt: youtubeConn?.expiresAt?.toISOString() ?? null,

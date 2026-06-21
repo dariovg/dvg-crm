@@ -15,6 +15,7 @@ export default function PublishButton({
 }: PublishButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [url, setUrl] = useState<string | null>(null);
 
   async function handlePublish() {
@@ -22,6 +23,7 @@ export default function PublishButton({
 
     setLoading(true);
     setError(null);
+    setSuccess(null);
     setUrl(null);
 
     try {
@@ -38,7 +40,17 @@ export default function PublishButton({
         throw new Error((data.error || "Error al publicar") + detail);
       }
 
-      if (data.url) setUrl(data.url);
+      const link =
+        data.url ||
+        (data.post?.externalId && platform === "TWITTER"
+          ? `https://x.com/i/web/status/${data.post.externalId}`
+          : null);
+
+      if (link) {
+        setUrl(link);
+      } else {
+        setSuccess(data.message || "Publicado correctamente");
+      }
       onPublished?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al publicar");
@@ -65,7 +77,16 @@ export default function PublishButton({
       >
         {loading ? "Publicando…" : `Publicar en ${platform}`}
       </button>
-      {error && <p className="alert alert-error" style={{ marginTop: "0.5rem" }}>{error}</p>}
+      {success && (
+        <p className="alert alert-info" style={{ marginTop: "0.5rem" }}>
+          {success}
+        </p>
+      )}
+      {error && (
+        <p className="alert alert-error" style={{ marginTop: "0.5rem", whiteSpace: "pre-wrap" }}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }

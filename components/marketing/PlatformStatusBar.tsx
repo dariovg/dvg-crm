@@ -15,9 +15,9 @@ type PlatformStatus = {
     error?: string | null;
     username?: string | null;
   };
-  tiktok: { appConfigured: boolean; connected: boolean };
-  youtube: { appConfigured: boolean; connected: boolean };
-  linkedin: { appConfigured: boolean; connected: boolean };
+  tiktok: { appConfigured: boolean; connected: boolean; hint?: string };
+  youtube: { appConfigured: boolean; connected: boolean; hint?: string };
+  linkedin: { appConfigured: boolean; connected: boolean; hint?: string };
 };
 
 const ITEMS: {
@@ -89,12 +89,13 @@ export default function PlatformStatusBar({ compact = false }: { compact?: boole
             const p = status[item.oauth];
             if (!p.appConfigured) {
               state = "off";
-              hint = "Variables en Vercel";
+              hint = p.hint || "Variables en Vercel";
             } else if (p.connected) {
               state = "ok";
+              hint = "Cuenta autorizada";
             } else {
               state = "warn";
-              hint = "Autorizar una vez";
+              hint = p.hint || "API OK — falta autorizar cuenta (Conectar)";
             }
           }
 
@@ -111,14 +112,23 @@ export default function PlatformStatusBar({ compact = false }: { compact?: boole
               <span className="platform-chip-state">
                 {state === "ok" ? "Listo" : state === "warn" ? "Pendiente" : "Off"}
               </span>
-              {hint && !compact && (
-                <span className="platform-chip-hint" title={hint}>
-                  {hint.length > 48 ? `${hint.slice(0, 45)}…` : hint}
+              {hint && (
+                <span
+                  className={`platform-chip-hint${compact ? " platform-chip-hint--compact" : ""}`}
+                  title={hint}
+                >
+                  {compact
+                    ? hint.length > 28
+                      ? `${hint.slice(0, 25)}…`
+                      : hint
+                    : hint.length > 48
+                      ? `${hint.slice(0, 45)}…`
+                      : hint}
                 </span>
               )}
               {showConnect && (
-                <a href={item.connect} className="platform-chip-link">
-                  Conectar
+                <a href={item.connect} className="platform-chip-link" title={hint || undefined}>
+                  Autorizar
                 </a>
               )}
             </div>

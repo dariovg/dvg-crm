@@ -4,6 +4,11 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { publishSocialPost, isPlatformReadyToPublish, recordPublishFailure } from "@/lib/social/publish.js";
 import { pickVideoUrl } from "@/lib/social/tiktok.js";
+import { buildPublishedPostUrl } from "@/lib/social/publish-url.js";
+
+function approvalActorId(session: { user: { id: string } }) {
+  return session.user.id !== "env-admin" ? session.user.id : null;
+}
 
 export async function POST(
   _request: NextRequest,
@@ -11,6 +16,7 @@ export async function POST(
 ) {
   const { id: postId } = await params;
   let post = null;
+  let publishedPost = null;
 
   try {
     const session = await getServerSession(authOptions);
@@ -71,32 +77,40 @@ export async function POST(
       });
     }
 
-    const updated = await publishSocialPost(post);
+    if (!post.content?.trim() && post.platform === "TWITTER") {
+      return NextResponse.json(
+        { error: "El post no tiene texto. Edítalo antes de publicar en X." },
+        { status: 400 }
+      );
+    }
 
-    await prisma.postApproval.create({
-      data: {
-        postId,
-        status: "PUBLISHED",
-        approvedById: session.user.id,
-        approvedAt: new Date(),
-        notes: `Publicado en ${post.platform}`,
-      },
-    });
+    publishedPost = await publishSocialPost(post);
+
+    try {
+      await prisma.postApproval.create({
+        data: {
+          postId,
+          status: "PUBLISHED",
+          approvedById: approvalActorId(session),
+          approvedAt: new Date(),
+          notes: `Publicado en ${post.platform}`,
+        },
+      });
+    } catch (approvalErr) {
+      console.error("postApproval after publish (non-fatal):", approvalErr);
+    }
 
     return NextResponse.json({
       message: "Publicado correctamente",
-      post: updated,
-      url:
-        post.platform === "TWITTER" && updated.externalId
-          ? `https://x.com/i/web/status/${updated.externalId}`
-          : null,
+      post: publishedPost,
+      url: buildPublishedPostUrl(post.platform, publishedPost.externalId),
     });
   } catch (error) {
     console.error("Error publishing post:", error);
     const message =
       error instanceof Error ? error.message : "Error interno al publicar";
 
-    if (post) {
+    if (post && !publishedPost) {
       const updated = await recordPublishFailure(
         post,
         error instanceof Error ? error : new Error(message)
