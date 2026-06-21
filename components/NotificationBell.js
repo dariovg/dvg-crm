@@ -23,9 +23,12 @@ export default function NotificationBell() {
   }, []);
 
   useEffect(() => {
-    load();
+    const initial = setTimeout(load, 1200);
     const timer = setInterval(load, 60000);
-    return () => clearInterval(timer);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(timer);
+    };
   }, [load]);
 
   async function onClick(n) {

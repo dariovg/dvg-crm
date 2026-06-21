@@ -1,13 +1,24 @@
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { CONTACT_STATUSES, FUNNEL_STAGES } from "@/lib/constants";
 import { getAuthSession, listTeamUsers } from "@/lib/auth-server";
-import { contactScope, taskScope, isStaff, quoteScope, canAccessTasksCalendar, isCommercial } from "@/lib/permissions";
-import { computeStageDurations, taskDueStatus } from "@/lib/crm-utils";
-import { buildActivityFeed } from "@/lib/lead-timeline";
+import {
+  contactScope,
+  taskScope,
+  isStaff,
+  quoteScope,
+  canAccessTasksCalendar,
+  isCommercial,
+} from "@/lib/permissions";
+import { taskDueStatus } from "@/lib/crm-utils";
 import { getCrmSettings } from "@/lib/crm-settings";
-import { getInactiveLeads } from "@/lib/inactivity";
 import { withLeadScores } from "@/lib/lead-score";
 import DashboardView from "@/components/DashboardView";
+import { DashboardExtra } from "@/components/DashboardExtra";
+import DashboardExtraSkeleton from "@/components/DashboardExtraSkeleton";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export default async function DashboardPage() {
   const session = await getAuthSession();
@@ -31,11 +42,7 @@ export default async function DashboardPage() {
     weeklyNew,
     weeklyEvents,
     weeklyTasks,
-    teamUsers,
-    statusEvents,
     openTasks,
-    activityContacts,
-    inactiveLeads,
     openQuotes,
     pendingQuotes,
   ] = await Promise.all([
@@ -74,50 +81,11 @@ export default async function DashboardPage() {
         ? { done: true, updatedAt: { gte: weekAgo }, ...taskScope(session) }
         : { id: "__none__" },
     }),
-    staff
-      ? prisma.user.findMany({
-          where: { role: { in: ["MEMBER", "MANAGER"] } },
-          select: { id: true, name: true, email: true },
-        })
-      : Promise.resolve([]),
-    prisma.contactEvent.findMany({
-      where: {
-        type: "status_changed",
-        contact: scope,
-        createdAt: { gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) },
-      },
-      orderBy: { createdAt: "asc" },
-      take: 5000,
-      include: {
-        contact: { select: { status: true, createdAt: true } },
-      },
-    }),
     prisma.task.findMany({
       where: taskWhere,
       select: { dueAt: true, done: true },
+      take: 200,
     }),
-    prisma.contact.findMany({
-      where: scope,
-      orderBy: { updatedAt: "desc" },
-      take: 25,
-      include: {
-        createdBy: { select: { name: true } },
-        events: {
-          orderBy: { createdAt: "desc" },
-          take: 8,
-          include: { user: { select: { name: true } } },
-        },
-        meetings: { orderBy: { createdAt: "desc" }, take: 2 },
-        tasks: {
-          orderBy: { createdAt: "desc" },
-          take: 3,
-          include: { assignee: { select: { name: true } } },
-        },
-        surveys: { orderBy: { createdAt: "desc" }, take: 1 },
-        quotes: { orderBy: { createdAt: "desc" }, take: 3, select: { id: true, number: true, createdAt: true } },
-      },
-    }),
-    getInactiveLeads(prisma, scope, inactivityDays),
     prisma.quote.count({
       where: {
         ...qScope,
@@ -133,35 +101,10 @@ export default async function DashboardPage() {
     byStatus.map((b) => [b.status, b._count._all])
   );
 
-  const memberStats = staff
-    ? await Promise.all(
-        teamUsers.map(async (u) => {
-          const [assigned, won, pendingTasksMember] = await Promise.all([
-            prisma.contact.count({ where: { assigneeId: u.id } }),
-            prisma.contact.count({
-              where: { assigneeId: u.id, status: "WON" },
-            }),
-            prisma.task.count({
-              where: { assigneeId: u.id, done: false },
-            }),
-          ]);
-          return {
-            id: u.id,
-            name: u.name || u.email.split("@")[0],
-            assigned,
-            won,
-            pendingTasks: pendingTasksMember,
-          };
-        })
-      )
-    : [];
-
   const funnel = FUNNEL_STAGES.map((id) => {
     const meta = CONTACT_STATUSES.find((s) => s.id === id);
     return { id, label: meta?.label || id, count: counts[id] || 0 };
   });
-
-  const stageDurations = computeStageDurations(statusEvents);
 
   let overdue = 0;
   let dueToday = 0;
@@ -171,7 +114,6 @@ export default async function DashboardPage() {
     if (s === "today") dueToday++;
   }
 
-  const recentActivity = buildActivityFeed(activityContacts, 4).slice(0, 12);
   const recentWithScores = withLeadScores(recent, scoringRules);
 
   const stats = {
@@ -189,26 +131,31 @@ export default async function DashboardPage() {
   };
 
   return (
-    <DashboardView
-      stats={stats}
-      recent={recentWithScores}
-      isStaff={staff}
-      showTasks={showTasks}
-      isCommercial={commercial}
-      teamCount={team.length}
-      memberStats={memberStats}
-      funnel={funnel}
-      weekly={{
-        newLeads: weeklyNew,
-        statusChanges: weeklyEvents,
-        tasksDone: weeklyTasks,
-      }}
-      quoteStats={{ open: openQuotes, pending: pendingQuotes }}
-      stageDurations={stageDurations}
-      taskReminders={showTasks ? { overdue, dueToday } : null}
-      recentActivity={recentActivity}
-      inactiveLeads={inactiveLeads}
-      inactivityDays={inactivityDays}
-    />
+    <div className="page-pad dash-page">
+      <DashboardView
+        stats={stats}
+        recent={recentWithScores}
+        isStaff={staff}
+        showTasks={showTasks}
+        isCommercial={commercial}
+        teamCount={team.length}
+        weekly={{
+          newLeads: weeklyNew,
+          statusChanges: weeklyEvents,
+          tasksDone: weeklyTasks,
+        }}
+        quoteStats={{ open: openQuotes, pending: pendingQuotes }}
+        taskReminders={showTasks ? { overdue, dueToday } : null}
+      />
+      <Suspense fallback={<DashboardExtraSkeleton />}>
+        <DashboardExtra
+          session={session}
+          inactivityDays={inactivityDays}
+          statsTotal={stats.total}
+          funnel={funnel}
+          statsByStatus={stats.byStatus}
+        />
+      </Suspense>
+    </div>
   );
 }

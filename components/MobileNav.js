@@ -67,6 +67,7 @@ export function MobileDrawer({ open, onClose }) {
             <Link
               key={l.href}
               href={l.href}
+              prefetch={false}
               className={`mobile-drawer-link${isActive(l.href) ? " mobile-drawer-link--active" : ""}`}
               onClick={handleLinkClick}
             >
@@ -137,6 +138,7 @@ export function BottomTabBar({ onMoreClick }) {
       <nav className="bottom-tab-bar" aria-label="Navegación principal">
         <Link
           href="/marketing"
+          prefetch={false}
           className={`bottom-tab${pathname.startsWith("/marketing") ? " bottom-tab--active" : ""}`}
         >
           <NavIcon name="marketing" />
@@ -156,6 +158,7 @@ export function BottomTabBar({ onMoreClick }) {
         <Link
           key={tab.href}
           href={tab.href}
+          prefetch={false}
           className={`bottom-tab${isActive(tab.href) ? " bottom-tab--active" : ""}`}
         >
           <NavIcon name={tab.icon} size={20} />

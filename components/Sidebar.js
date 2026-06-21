@@ -90,6 +90,7 @@ export default function Sidebar() {
                     <Link
                       key={l.href}
                       href={l.href}
+                      prefetch={false}
                       className={`sidebar-link${isActive(l.href) ? " sidebar-link--active" : ""}`}
                     >
                       <NavIcon name={l.icon} className="sidebar-link-icon" />
