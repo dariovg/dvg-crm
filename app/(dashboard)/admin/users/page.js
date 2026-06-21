@@ -24,7 +24,7 @@ export default async function AdminUsersPage() {
     <>
       <h1 className="page-title">Equipo</h1>
       <p className="page-lead">
-        Gestiona cuentas del CRM. Admin ve todo; manager opera leads; equipo solo
+        Gestiona cuentas de la app. Admin ve todo; manager opera leads; equipo solo
         lo asignado.
       </p>
       <TeamUsersAdmin users={users} />

@@ -24,12 +24,12 @@ async function main() {
   const passwordHash = bcrypt.hashSync(plain, 12);
   const user = await prisma.user.upsert({
     where: { email },
-    update: { passwordHash, role: "ADMIN", name: "DVG CRM Admin" },
+    update: { passwordHash, role: "ADMIN", name: "App Admin" },
     create: {
       email,
       passwordHash,
       role: "ADMIN",
-      name: "DVG CRM Admin",
+      name: "App Admin",
     },
   });
 

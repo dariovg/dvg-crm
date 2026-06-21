@@ -12,7 +12,7 @@ export default async function AdminCrmSettingsPage() {
 
   return (
     <>
-      <h1 className="page-title">CRM comercial</h1>
+      <h1 className="page-title">Ajustes comercial</h1>
       <p className="page-lead">
         Ajusta recordatorios por inactividad y reglas de puntuación de leads.
       </p>

@@ -14,7 +14,7 @@ export default async function AdminSecurityPage() {
     <>
       <h1 className="page-title">Seguridad</h1>
       <p className="page-lead">
-        Sesiones activas y cierre remoto de dispositivos conectados al CRM.
+        Sesiones activas y cierre remoto de dispositivos conectados a la app.
       </p>
       <ActiveSessionsAdmin
         sessions={sessions}

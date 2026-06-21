@@ -7,6 +7,6 @@ test.describe("Login", () => {
     await expect(page.getByRole("heading", { name: /Tu panel de/i })).toBeVisible();
     await expect(page.getByLabel("Email")).toBeVisible();
     await expect(page.getByLabel("Contraseña")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Entrar al CRM" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible();
   });
 });

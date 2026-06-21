@@ -85,7 +85,7 @@ function EmployeeForm({ users, employee, onCancel, onDone }) {
           </select>
         </div>
         <div className="field">
-          <label>Usuario CRM (opcional)</label>
+          <label>Usuario App (opcional)</label>
           <select name="userId" defaultValue={employee?.userId || ""}>
             <option value="">Sin vincular</option>
             {users.map((u) => (

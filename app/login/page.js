@@ -6,6 +6,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import LanguageToggle from "@/components/LanguageToggle";
 import { useLocale } from "@/components/LocaleProvider";
 import { getDefaultHomeForRole } from "@/lib/permissions";
+import { APP_DISPLAY_NAME } from "@/lib/app-brand";
 
 function LockIcon() {
   return (
@@ -140,9 +141,7 @@ export default function LoginPage() {
 
         <div className="login-card">
           <div className="login-card-head">
-            <div className="login-logo">
-              DVG <span className="brand-ia">CRM</span>
-            </div>
+            <div className="login-logo">{APP_DISPLAY_NAME}</div>
             <p>{t("auth.subtitle")}</p>
           </div>
 

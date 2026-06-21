@@ -63,7 +63,7 @@ export default function ContactQuickActions({ contact, mailEnabled }) {
           className="btn-quick btn-quick--mail"
           onClick={openEmail}
           disabled={!mailReady}
-          title={mailReady ? "Enviar email desde CRM" : "SMTP no configurado"}
+          title={mailReady ? "Enviar email desde App" : "SMTP no configurado"}
         >
           Email
         </button>

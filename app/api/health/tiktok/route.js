@@ -23,7 +23,7 @@ export async function GET() {
       "Tras aprobar Content Posting API: TIKTOK_SCOPES=user.info.basic,video.publish,video.upload",
     ],
     hint: d.ready
-      ? "El CRM usa redirectUri sin barra final. Si en TikTok tienes otra URI fija, pon TIKTOK_REDIRECT_URI en Vercel con ese valor exacto."
+      ? "La app usa redirectUri sin barra final. Si en TikTok tienes otra URI fija, pon TIKTOK_REDIRECT_URI en Vercel con ese valor exacto."
       : "Corrige las variables que faltan en Vercel (Production)",
   });
 }

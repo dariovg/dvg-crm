@@ -80,7 +80,7 @@ export default function TwoFactorSetup({ enabled, mandatory = false }) {
       <h2>Autenticación en dos pasos</h2>
       {mandatory ? (
         <p className="alert-warning">
-          Debes activar 2FA para usar el CRM como administrador.
+          Debes activar 2FA para usar la app como administrador.
         </p>
       ) : (
         <p>Protege el acceso admin con Google Authenticator o similar.</p>

@@ -1,5 +1,6 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { APP_PAGE_TITLE, APP_DESCRIPTION } from "@/lib/app-brand";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -8,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "DVG CRM",
-  description: "CRM interno DVG Studio",
+  title: APP_PAGE_TITLE,
+  description: APP_DESCRIPTION,
 };
 
 export default function RootLayout({ children }) {

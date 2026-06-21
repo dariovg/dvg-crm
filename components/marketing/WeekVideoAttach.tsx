@@ -63,7 +63,7 @@ export default function WeekVideoAttach({
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al subir");
-      setMsg(`Subido al CRM — TikTok usará: ${data.publicUrl}`);
+      setMsg(`Subido a la app — TikTok usará: ${data.publicUrl}`);
       onSaved();
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Error al subir");
@@ -89,7 +89,7 @@ export default function WeekVideoAttach({
           ✅ Vídeo listo:{" "}
           <a href={videoUrl} target="_blank" rel="noreferrer" className="underline">
             {videoUrl.includes("/api/marketing/video/")
-              ? "en CRM (listo para TikTok)"
+              ? "en la app (listo para TikTok)"
               : "ver enlace"}
           </a>
         </p>
@@ -97,7 +97,7 @@ export default function WeekVideoAttach({
         <>
           <div className="marketing-week-upload-box">
             <span className="text-sm font-medium">
-              📁 Subir vídeo al CRM (recomendado para TikTok)
+              📁 Subir vídeo a la app (recomendado para TikTok)
             </span>
             <input
               ref={fileRef}
