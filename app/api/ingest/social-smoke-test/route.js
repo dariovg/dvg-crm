@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { verifyIngestSecret } from "@/lib/ingest";
 import { publishToTwitter, isTwitterConfigured } from "@/lib/social/twitter.js";
 import { publishToTikTok } from "@/lib/social/tiktok.js";
 import { isTikTokConnected } from "@/lib/social/tiktok-connection.js";
@@ -8,34 +9,23 @@ import {
   uploadMarketingVideo,
 } from "@/lib/social/video-storage.js";
 
-function authorized(request: NextRequest) {
-  const secret =
-    process.env.CRON_SECRET?.trim() ||
-    process.env.CRM_INGEST_SECRET?.trim() ||
-    "";
-  if (!secret) return false;
-  const auth = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  const ingest = request.headers.get("x-crm-ingest-secret");
-  return auth === secret || ingest === secret;
-}
-
-/** Smoke test X + TikTok (solo con CRON_SECRET o CRM_INGEST_SECRET). */
-export async function POST(request: NextRequest) {
-  if (!authorized(request)) {
+/** Smoke test X + TikTok (header x-crm-ingest-secret o Bearer CRM_INGEST_SECRET). */
+export async function POST(request) {
+  if (!verifyIngestSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
   const form = await request.formData().catch(() => null);
   const tweetText =
-    (form?.get("tweet") as string) ||
+    form?.get("tweet") ||
     `[TEST CRM] Prueba DVG Studio ${stamp}. Borraremos pronto. dvgsstudio.com`;
   const tiktokCaption =
-    (form?.get("caption") as string) ||
+    form?.get("caption") ||
     `Prueba CRM DVG Studio ${stamp} #test #dvgstudio`;
   const videoFile = form?.get("video");
 
-  const result: Record<string, unknown> = {
+  const result = {
     twitter: { configured: isTwitterConfigured() },
     tiktok: { connected: await isTikTokConnected() },
     blob: isVideoBlobConfigured(),
@@ -43,7 +33,7 @@ export async function POST(request: NextRequest) {
 
   if (isTwitterConfigured()) {
     try {
-      const published = await publishToTwitter(tweetText);
+      const published = await publishToTwitter(String(tweetText));
       result.twitter = { ok: true, ...published };
     } catch (err) {
       result.twitter = {
@@ -67,14 +57,14 @@ export async function POST(request: NextRequest) {
       const post = await prisma.socialPost.create({
         data: {
           platform: "TIKTOK",
-          content: tiktokCaption,
+          content: String(tiktokCaption),
           status: "APPROVED",
         },
       });
 
       const { publicUrl } = await uploadMarketingVideo(post.id, videoFile);
       const published = await publishToTikTok({
-        caption: tiktokCaption,
+        caption: String(tiktokCaption),
         videoUrl: publicUrl,
       });
 
@@ -104,9 +94,6 @@ export async function POST(request: NextRequest) {
     result.tiktok = { ok: false, error: "not_connected" };
   }
 
-  const ok =
-    (result.twitter as { ok?: boolean })?.ok ||
-    (result.tiktok as { ok?: boolean })?.ok;
-
+  const ok = result.twitter?.ok || result.tiktok?.ok;
   return NextResponse.json({ ok, ...result });
 }
