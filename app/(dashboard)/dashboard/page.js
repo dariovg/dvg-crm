@@ -81,8 +81,13 @@ export default async function DashboardPage() {
         })
       : Promise.resolve([]),
     prisma.contactEvent.findMany({
-      where: { type: "status_changed", contact: scope },
+      where: {
+        type: "status_changed",
+        contact: scope,
+        createdAt: { gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) },
+      },
       orderBy: { createdAt: "asc" },
+      take: 5000,
       include: {
         contact: { select: { status: true, createdAt: true } },
       },
@@ -116,7 +121,7 @@ export default async function DashboardPage() {
     prisma.quote.count({
       where: {
         ...qScope,
-        status: { notIn: ["ACCEPTED", "REJECTED", "EXPIRED"] },
+        status: { in: ["DRAFT", "PENDING_APPROVAL", "APPROVED", "SENT"] },
       },
     }),
     prisma.quote.count({
