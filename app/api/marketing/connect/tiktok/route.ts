@@ -5,6 +5,7 @@ import {
   buildTikTokAuthorizeUrl,
   generatePkcePair,
   getTikTokClientConfig,
+  getTikTokConfigDiagnostics,
   isTikTokAppConfigured,
 } from "@/lib/social/tiktok-connection.js";
 import crypto from "crypto";
@@ -17,16 +18,26 @@ export async function GET() {
   }
 
   if (!isTikTokAppConfigured()) {
+    const diag = getTikTokConfigDiagnostics();
     return NextResponse.json(
       {
         error:
-          "Faltan TIKTOK_CLIENT_KEY y TIKTOK_CLIENT_SECRET en el servidor.",
+          "TikTok mal configurado en el servidor. " +
+          (diag.missing.join("; ") ||
+            "Revisa TIKTOK_CLIENT_KEY y TIKTOK_CLIENT_SECRET en Vercel."),
+        redirectUri: diag.redirectUri,
       },
       { status: 503 }
     );
   }
 
-  const { redirectUri } = getTikTokClientConfig();
+  const { clientKey, redirectUri } = getTikTokClientConfig();
+  if (!clientKey || clientKey.length < 8) {
+    const base = process.env.NEXTAUTH_URL?.replace(/\/$/, "") || "";
+    return NextResponse.redirect(
+      `${base}/marketing?tiktok=error&msg=${encodeURIComponent("TIKTOK_CLIENT_KEY vacía o inválida en Vercel")}`
+    );
+  }
   const state = crypto.randomBytes(16).toString("hex");
   const { verifier, challenge } = generatePkcePair();
 
