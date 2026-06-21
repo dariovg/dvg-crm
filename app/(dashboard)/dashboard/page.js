@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { CONTACT_STATUSES, FUNNEL_STAGES } from "@/lib/constants";
 import { getAuthSession, listTeamUsers } from "@/lib/auth-server";
-import { contactScope, taskScope, isStaff } from "@/lib/permissions";
+import { contactScope, taskScope, isStaff, quoteScope, canAccessTasksCalendar, isCommercial } from "@/lib/permissions";
 import { computeStageDurations, taskDueStatus } from "@/lib/crm-utils";
 import { buildActivityFeed } from "@/lib/lead-timeline";
 import { getCrmSettings } from "@/lib/crm-settings";
@@ -13,7 +13,10 @@ export default async function DashboardPage() {
   const session = await getAuthSession();
   const scope = contactScope(session);
   const staff = isStaff(session);
-  const taskWhere = { ...taskScope(session), done: false };
+  const showTasks = canAccessTasksCalendar(session);
+  const commercial = isCommercial(session);
+  const taskWhere = showTasks ? { ...taskScope(session), done: false } : { id: "__none__" };
+  const qScope = quoteScope(session);
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const { inactivityDays, scoringRules } = await getCrmSettings();
 
@@ -33,6 +36,8 @@ export default async function DashboardPage() {
     openTasks,
     activityContacts,
     inactiveLeads,
+    openQuotes,
+    pendingQuotes,
   ] = await Promise.all([
     prisma.contact.count({ where: scope }),
     prisma.contact.groupBy({
@@ -65,7 +70,9 @@ export default async function DashboardPage() {
       },
     }),
     prisma.task.count({
-      where: { done: true, updatedAt: { gte: weekAgo }, ...taskScope(session) },
+      where: showTasks
+        ? { done: true, updatedAt: { gte: weekAgo }, ...taskScope(session) }
+        : { id: "__none__" },
     }),
     staff
       ? prisma.user.findMany({
@@ -106,6 +113,15 @@ export default async function DashboardPage() {
       },
     }),
     getInactiveLeads(prisma, scope, inactivityDays),
+    prisma.quote.count({
+      where: {
+        ...qScope,
+        status: { notIn: ["ACCEPTED", "REJECTED", "EXPIRED"] },
+      },
+    }),
+    prisma.quote.count({
+      where: { ...qScope, status: "PENDING_APPROVAL" },
+    }),
   ]);
 
   const counts = Object.fromEntries(
@@ -172,6 +188,8 @@ export default async function DashboardPage() {
       stats={stats}
       recent={recentWithScores}
       isStaff={staff}
+      showTasks={showTasks}
+      isCommercial={commercial}
       teamCount={team.length}
       memberStats={memberStats}
       funnel={funnel}
@@ -180,8 +198,9 @@ export default async function DashboardPage() {
         statusChanges: weeklyEvents,
         tasksDone: weeklyTasks,
       }}
+      quoteStats={{ open: openQuotes, pending: pendingQuotes }}
       stageDurations={stageDurations}
-      taskReminders={{ overdue, dueToday }}
+      taskReminders={showTasks ? { overdue, dueToday } : null}
       recentActivity={recentActivity}
       inactiveLeads={inactiveLeads}
       inactivityDays={inactivityDays}
