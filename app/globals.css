@@ -64,6 +64,7 @@ body {
   height: 100vh;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
+  z-index: 20;
 }
 
 .sidebar-brand {
@@ -1915,7 +1916,10 @@ body {
 }
 .notif-backdrop {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--sidebar-w);
   z-index: 999;
 }
 .notif-panel {
@@ -3343,6 +3347,7 @@ body {
 /* ——— Mobile breakpoints ——— */
 @media (max-width: 900px) {
   .sidebar { display: none; }
+  .notif-backdrop { left: 0; }
   .mobile-menu-btn { display: inline-flex; }
   .bottom-tab-bar { display: flex; }
   .app-main {

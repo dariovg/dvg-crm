@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getNavSectionsForSession } from "@/lib/nav-links";
 import ThemeToggle from "@/components/ThemeToggle";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -27,7 +27,10 @@ export default function Sidebar() {
   const isAdmin = role === "ADMIN";
   const isManager = role === "MANAGER";
   const isCommercial = role === "COMMERCIAL";
-  const sections = getNavSectionsForSession(session);
+  const sections = useMemo(
+    () => getNavSectionsForSession(session),
+    [session?.user?.role, session?.user?.id]
+  );
   const isMarketingOnly = role === "MARKETING";
 
   const [openSections, setOpenSections] = useState(() =>
@@ -36,15 +39,19 @@ export default function Sidebar() {
 
   useEffect(() => {
     setOpenSections((prev) => {
+      let changed = false;
       const next = { ...prev };
       for (const section of sections) {
-        if (sectionHasActiveLink(section.links, pathname)) {
+        if (next[section.id] === undefined) {
           next[section.id] = true;
-        } else if (next[section.id] === undefined) {
+          changed = true;
+        }
+        if (sectionHasActiveLink(section.links, pathname) && !next[section.id]) {
           next[section.id] = true;
+          changed = true;
         }
       }
-      return next;
+      return changed ? next : prev;
     });
   }, [pathname, sections]);
 
