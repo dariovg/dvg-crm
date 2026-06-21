@@ -1,9 +1,9 @@
 "use client";
 
 import { formatEuro } from "@/lib/pricing-catalog";
-import { computeLineTotal, computeLineVat, VAT_RATE } from "@/lib/quotes";
+import { computeLineTotal, computeLineVat, VAT_RATE, formatLineDiscountLabel } from "@/lib/quotes";
 
-export default function QuoteLineEditor({ lines, onChange, readOnly = false, compact = false }) {
+export default function QuoteLineEditor({ lines, onChange, readOnly = false, compact = false, billing = "MONTHLY" }) {
   const vatPercent = Math.round(VAT_RATE * 100);
   function updateLine(index, field, value) {
     const next = lines.map((l, i) =>
@@ -106,7 +106,7 @@ export default function QuoteLineEditor({ lines, onChange, readOnly = false, com
               {!compact && (
                 <td>
                   {readOnly ? (
-                    line.discountPercent ? `${line.discountPercent}%` : "—"
+                    formatLineDiscountLabel(line, billing)
                   ) : (
                     <input
                       type="number"
@@ -126,9 +126,9 @@ export default function QuoteLineEditor({ lines, onChange, readOnly = false, com
                   )}
                 </td>
               )}
-              <td>{formatEuro(computeLineTotal(line))}</td>
-              <td>{formatEuro(computeLineVat(line))}</td>
-              <td>{formatEuro(computeLineTotal(line) + computeLineVat(line))}</td>
+              <td>{formatEuro(computeLineTotal(line, billing))}</td>
+              <td>{formatEuro(computeLineVat(line, billing))}</td>
+              <td>{formatEuro(computeLineTotal(line, billing) + computeLineVat(line, billing))}</td>
               {!readOnly && (
                 <td>
                   <button

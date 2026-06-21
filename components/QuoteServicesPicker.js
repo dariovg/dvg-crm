@@ -1,6 +1,6 @@
 "use client";
 
-import { PLANS, formatEuro, packLineDescription } from "@/lib/pricing-catalog";
+import { PLANS, formatEuro, packLineDescription, buildIaPackLineFields, firstMonthIaPrice, annualUpfrontIaTotal, FIRST_MONTH_IA_DISCOUNT_PERCENT } from "@/lib/pricing-catalog";
 import { catalogPriceForPack } from "@/lib/quotes";
 import {
   QUOTE_TEMPLATES,
@@ -20,9 +20,12 @@ export default function QuoteServicesPicker({
     onChange(
       lines.map((line) => {
         if (line.type === "PACK" && line.packId) {
+          const promo = buildIaPackLineFields(line.packId, nextBilling);
           return {
             ...line,
             unitPrice: catalogPriceForPack(line.packId, nextBilling),
+            discountPercent: promo.discountPercent,
+            description: promo.description,
           };
         }
         return line;
@@ -55,14 +58,16 @@ export default function QuoteServicesPicker({
 
   function addPack(packId) {
     if (disabled || lines.some((l) => l.type === "PACK" && l.packId === packId)) return;
+    const promo = buildIaPackLineFields(packId, billing);
     onChange([
       ...lines,
       {
         type: "PACK",
         packId,
-        description: packLineDescription(packId),
+        description: promo.description,
         quantity: 1,
         unitPrice: catalogPriceForPack(packId, billing),
+        discountPercent: promo.discountPercent,
         sortOrder: lines.length,
       },
     ]);
@@ -108,13 +113,26 @@ export default function QuoteServicesPicker({
           disabled={disabled}
         >
           <option value="MONTHLY">Mensual</option>
-          <option value="ANNUAL">Anual (−15%)</option>
+          <option value="ANNUAL">Anual (−15% + promo mes 1 IA · pago único)</option>
         </select>
       </div>
+      <p className="muted quote-pack-hint">
+        Promo confianza mutua: <strong>−{FIRST_MONTH_IA_DISCOUNT_PERCENT}%</strong> en el
+        mantenimiento del <strong>mes 1</strong> de packs IA (Starter/Pro/Enterprise). En anual,
+        el −40% se aplica sobre la tarifa ya con −15%; pago único de 12 meses. No aplica a web,
+        consultoría ni implementación.
+      </p>
       <h3 className="quote-pack-heading">Planes IA</h3>
       <div className="quote-pack-picker">
         {PLANS.map((plan) => {
           const selected = lines.some((l) => l.type === "PACK" && l.packId === plan.id);
+          const catalog = catalogPriceForPack(plan.id, billing);
+          const mes1 =
+            billing === "MONTHLY"
+              ? firstMonthIaPrice(plan.monthly)
+              : firstMonthIaPrice(catalog);
+          const upfront =
+            billing === "ANNUAL" ? annualUpfrontIaTotal(plan.monthly) : null;
           return (
             <button
               key={plan.id}
@@ -126,7 +144,17 @@ export default function QuoteServicesPicker({
             >
               <strong>{plan.name}</strong>
               <span>
-                {formatEuro(catalogPriceForPack(plan.id, billing))}/mes
+                {formatEuro(catalog)}/mes
+                {mes1 != null && (
+                  <>
+                    {" "}
+                    · Mes 1: {formatEuro(mes1)} (−{FIRST_MONTH_IA_DISCOUNT_PERCENT}%
+                    {billing === "ANNUAL" ? " sobre tarifa anual" : ""})
+                  </>
+                )}
+                {upfront != null && (
+                  <> · Pago único 12 meses: {formatEuro(upfront)}</>
+                )}
                 {selected ? " · Añadido" : ""}
               </span>
             </button>

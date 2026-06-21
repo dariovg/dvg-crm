@@ -32,6 +32,7 @@ import {
   computeQuoteTotal,
   generateQuoteNumber,
   needsApproval,
+  buildIaPackLineFields,
   packLineDescription,
 } from "@/lib/quotes";
 import { planById } from "@/lib/pricing-catalog";
@@ -1037,14 +1038,16 @@ export async function createQuote(
 
   if (packId && projectType === "IA") {
     const price = catalogPriceForPack(packId, resolvedBilling);
+    const promo = buildIaPackLineFields(packId, resolvedBilling);
     const nonPack = lines.filter((l) => l.type !== "PACK");
     lines = [
       {
         type: "PACK",
         packId,
-        description: packLineDescription(packId),
+        description: promo.description,
         quantity: 1,
         unitPrice: price,
+        discountPercent: promo.discountPercent,
         sortOrder: 0,
       },
       ...nonPack.map((l, i) => ({ ...l, sortOrder: i + 1 })),
@@ -1052,12 +1055,14 @@ export async function createQuote(
     resolvedPackId = packId;
   } else if (!lines.length && packId) {
     const price = catalogPriceForPack(packId, resolvedBilling);
+    const promo = buildIaPackLineFields(packId, resolvedBilling);
     lines.push({
       type: "PACK",
       packId,
-      description: packLineDescription(packId),
+      description: promo.description,
       quantity: 1,
       unitPrice: price,
+      discountPercent: promo.discountPercent,
       sortOrder: 0,
     });
     resolvedPackId = packId;
@@ -1472,6 +1477,7 @@ export async function addPackToQuote(quoteId, packId) {
   if (!canEditQuote(session, quote)) throw new Error("No autorizado");
 
   const price = catalogPriceForPack(packId, quote.billing);
+  const promo = buildIaPackLineFields(packId, quote.billing);
   const existing = quote.lines.filter((l) => l.type !== "PACK" || l.packId !== packId);
   const packLines = quote.lines.filter((l) => l.type === "PACK");
   const otherPacks = packLines.filter((l) => l.packId !== packId);
@@ -1489,9 +1495,10 @@ export async function addPackToQuote(quoteId, packId) {
     {
       type: "PACK",
       packId,
-      description: packLineDescription(packId),
+      description: promo.description,
       quantity: 1,
       unitPrice: price,
+      discountPercent: promo.discountPercent,
       sortOrder: otherPacks.length,
     },
     ...existing

@@ -8,11 +8,14 @@ import {
   FOOTER_TEXT,
   QUOTE_BILLING_LABEL,
   VAT_RATE,
+  formatLineDiscountLabel,
+  hasIaFirstMonthPromo,
+  FIRST_MONTH_IA_DISCOUNT_PERCENT,
 } from "@/lib/quotes";
 import { formatEuro } from "@/lib/pricing-catalog";
 
 export default function QuotePdfView({ quote, showSignature = false, trackingPixel = null }) {
-  const subtotal = computeQuoteSubtotal(quote.lines);
+  const subtotal = computeQuoteSubtotal(quote.lines, quote.billing);
   const baseTotal = computeQuoteTotal(quote, quote.lines);
   const vatTotal = computeQuoteVat(quote, quote.lines);
   const grandTotal = computeQuoteTotalWithVat(quote, quote.lines);
@@ -90,8 +93,8 @@ export default function QuotePdfView({ quote, showSignature = false, trackingPix
         </thead>
         <tbody>
           {quote.lines.map((line) => {
-            const lineBase = computeLineTotal(line);
-            const lineVat = computeLineVat(line);
+            const lineBase = computeLineTotal(line, quote.billing);
+            const lineVat = computeLineVat(line, quote.billing);
             return (
               <tr key={line.id}>
                 <td>
@@ -99,7 +102,7 @@ export default function QuotePdfView({ quote, showSignature = false, trackingPix
                 </td>
                 <td>{line.quantity}</td>
                 <td>{formatEuro(line.unitPrice)}</td>
-                <td>{line.discountPercent ? `${line.discountPercent}%` : "—"}</td>
+                <td>{formatLineDiscountLabel(line, quote.billing)}</td>
                 <td>{formatEuro(lineBase)}</td>
                 <td>{formatEuro(lineVat)}</td>
                 <td>{formatEuro(lineBase + lineVat)}</td>
@@ -108,6 +111,21 @@ export default function QuotePdfView({ quote, showSignature = false, trackingPix
           })}
         </tbody>
       </table>
+
+      {hasIaFirstMonthPromo(quote.lines) && quote.billing === "MONTHLY" && (
+        <p className="quote-pdf-promo-note">
+          Mes 1 mantenimiento agente IA −{FIRST_MONTH_IA_DISCOUNT_PERCENT}% (promo confianza mutua,
+          nuevos clientes IA). El total refleja el importe del primer mes; meses 2+ al precio
+          unitario indicado. Mínimo 3 meses de contrato.
+        </p>
+      )}
+      {hasIaFirstMonthPromo(quote.lines) && quote.billing === "ANNUAL" && (
+        <p className="quote-pdf-promo-note">
+          Facturación anual en pago único: 11 meses a tarifa −15%, mes 1 con −
+          {FIRST_MONTH_IA_DISCOUNT_PERCENT}% adicional sobre esa tarifa. El total incluye los 12
+          meses de mantenimiento del agente IA.
+        </p>
+      )}
 
       <div className="quote-pdf-totals">
         <div>
@@ -130,7 +148,14 @@ export default function QuotePdfView({ quote, showSignature = false, trackingPix
         </div>
         <div className="quote-pdf-total-final">
           <span>
-            Total {quote.billing === "ANNUAL" ? "mensual (compromiso anual)" : "mensual"} con IVA
+          <span>
+            Total{" "}
+            {quote.billing === "ANNUAL" && hasIaFirstMonthPromo(quote.lines)
+              ? "anual (12 meses, pago único) con IVA"
+              : quote.billing === "ANNUAL"
+                ? "anual (12 meses) con IVA"
+                : "mensual con IVA"}
+          </span>
           </span>
           <strong>{formatEuro(grandTotal)}</strong>
         </div>

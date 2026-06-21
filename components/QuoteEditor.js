@@ -26,6 +26,8 @@ import {
   needsApproval,
   QUOTE_BILLING_LABEL,
   VAT_RATE,
+  hasIaFirstMonthPromo,
+  FIRST_MONTH_IA_DISCOUNT_PERCENT,
 } from "@/lib/quotes";
 import {
   resolveQuoteProjectLabel,
@@ -58,7 +60,7 @@ export default function QuoteEditor({ quote, isAdmin, canEdit, canDelete = false
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
-  const subtotal = computeQuoteSubtotal(lines);
+  const subtotal = computeQuoteSubtotal(lines, billing);
   const quoteMeta = { discountPercent: discountPercent || null };
   const baseTotal = computeQuoteTotal(quoteMeta, lines);
   const vatTotal = computeQuoteVat(quoteMeta, lines);
@@ -223,7 +225,19 @@ export default function QuoteEditor({ quote, isAdmin, canEdit, canDelete = false
         subtitle={`${lines.length} líneas · ${formatEuro(subtotal)} subtotal`}
         defaultOpen
       >
-        <QuoteLineEditor lines={lines} onChange={setLines} readOnly={readOnly} compact={!readOnly} />
+        <QuoteLineEditor lines={lines} onChange={setLines} readOnly={readOnly} compact={!readOnly} billing={billing} />
+        {hasIaFirstMonthPromo(lines) && billing === "MONTHLY" && (
+          <p className="muted quote-pack-hint">
+            Mes 1 mantenimiento agente IA −{FIRST_MONTH_IA_DISCOUNT_PERCENT}% (promo confianza mutua).
+            Total refleja mes 1; meses 2+ al precio unitario.
+          </p>
+        )}
+        {hasIaFirstMonthPromo(lines) && billing === "ANNUAL" && (
+          <p className="muted quote-pack-hint">
+            Facturación anual en pago único: 11 meses a tarifa −15%, mes 1 con −
+            {FIRST_MONTH_IA_DISCOUNT_PERCENT}% adicional sobre esa tarifa.
+          </p>
+        )}
         <div className="quote-totals">
           <div>
             <span>Subtotal</span>
@@ -257,7 +271,15 @@ export default function QuoteEditor({ quote, isAdmin, canEdit, canDelete = false
             <strong>{formatEuro(vatTotal)}</strong>
           </div>
           <div className="quote-total-row">
-            <span>Total {billing === "ANNUAL" ? "(mensual, plan anual)" : "(mensual)"} con IVA</span>
+            <span>
+              Total{" "}
+              {billing === "ANNUAL" && hasIaFirstMonthPromo(lines)
+                ? "anual (12 meses, pago único)"
+                : billing === "ANNUAL"
+                  ? "anual (12 meses)"
+                  : "(mensual)"}{" "}
+              con IVA
+            </span>
             <strong>{formatEuro(totalWithVat)}</strong>
           </div>
         </div>

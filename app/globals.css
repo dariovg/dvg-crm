@@ -2570,6 +2570,16 @@ body {
   font-size: .85rem;
   margin-bottom: 1.25rem;
 }
+.quote-pdf-promo-note {
+  font-size: .82rem;
+  color: var(--gray);
+  margin: 0 0 1rem;
+  padding: .65rem .85rem;
+  background: #fff8f3;
+  border: 1px solid #fde8d4;
+  border-radius: 8px;
+  line-height: 1.5;
+}
 .quote-pdf-table {
   width: 100%;
   border-collapse: collapse;
