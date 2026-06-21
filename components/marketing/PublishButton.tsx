@@ -17,6 +17,7 @@ export default function PublishButton({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [url, setUrl] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
   async function handlePublish() {
     if (!confirm(`¿Publicar ahora en ${platform}?`)) return;
@@ -25,6 +26,7 @@ export default function PublishButton({
     setError(null);
     setSuccess(null);
     setUrl(null);
+    setDone(false);
 
     try {
       const res = await fetch(`/api/marketing/posts/${postId}/publish`, {
@@ -48,10 +50,12 @@ export default function PublishButton({
 
       if (link) {
         setUrl(link);
+        setSuccess("Publicado correctamente.");
       } else {
         setSuccess(data.message || "Publicado correctamente");
+        setDone(true);
+        onPublished?.();
       }
-      onPublished?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al publicar");
     } finally {
@@ -59,11 +63,34 @@ export default function PublishButton({
     }
   }
 
+  function handleDismiss() {
+    setDone(true);
+    onPublished?.();
+  }
+
+  if (done && !url) {
+    return (
+      <p className="muted" style={{ marginTop: "0.5rem" }}>
+        Publicado — recarga la página si no lo ves en Historial.
+      </p>
+    );
+  }
+
   if (url) {
     return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
-        Ver en X →
-      </a>
+      <div className="publish-action">
+        <p className="alert alert-info" style={{ marginBottom: "0.5rem" }}>
+          {success || "Publicado correctamente."}
+        </p>
+        <div className="marketing-approval-actions">
+          <a href={url} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+            Ver publicación →
+          </a>
+          <button type="button" onClick={handleDismiss} className="btn btn-secondary">
+            Quitar de la cola
+          </button>
+        </div>
+      </div>
     );
   }
 

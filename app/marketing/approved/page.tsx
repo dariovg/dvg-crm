@@ -110,11 +110,11 @@ export default function ApprovedPostsPage() {
         <PlatformStatusBar compact />
       </Suspense>
 
-      {!xReady && isAdmin && (
+      {!xReady && isAdmin && ready.some((p) => p.platform === "TWITTER") && (
         <div className="alert alert-warn">
-          <strong>X no publicará automáticamente.</strong>{" "}
-          {xIssue || "Revisa las variables en Vercel."} Mientras tanto puedes copiar el
-          texto y publicar manualmente.
+          <strong>X: revisa la configuración.</strong>{" "}
+          {xIssue || "Revisa las variables en Vercel."} Puedes intentar publicar
+          igualmente; el error concreto aparecerá bajo el botón.
         </div>
       )}
 
