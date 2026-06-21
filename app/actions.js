@@ -44,6 +44,11 @@ import {
 import { generateShareToken } from "@/lib/quote-share";
 import { recordAudit } from "@/lib/audit";
 import {
+  notifyTeamCalendarEvent,
+  EVENT_CATEGORIES,
+  EVENT_AUDIENCES,
+} from "@/lib/team-calendar";
+import {
   listActiveSessions,
   revokeAllUserSessions,
   revokeSession,
@@ -1497,6 +1502,110 @@ export async function addPackToQuote(quoteId, packId) {
   });
   await syncQuoteLines(quoteId, lines);
   revalidateQuotePaths(quoteId, quote.contactId);
+  return { ok: true };
+}
+
+function parseTeamEventInput(payload) {
+  const title = String(payload.title || "").trim();
+  if (title.length < 2) throw new Error("Título demasiado corto");
+
+  const startsAt = new Date(payload.startsAt);
+  if (Number.isNaN(startsAt.getTime())) throw new Error("Fecha/hora de inicio no válida");
+
+  let endsAt = null;
+  if (payload.endsAt) {
+    endsAt = new Date(payload.endsAt);
+    if (Number.isNaN(endsAt.getTime())) throw new Error("Hora de fin no válida");
+    if (endsAt <= startsAt) throw new Error("La hora de fin debe ser posterior al inicio");
+  }
+
+  const category = payload.category;
+  if (!EVENT_CATEGORIES[category]) throw new Error("Categoría no válida");
+
+  const audience = payload.audience;
+  if (!EVENT_AUDIENCES[audience]) throw new Error("Audiencia no válida");
+
+  return {
+    title: title.slice(0, 120),
+    description: String(payload.description || "").trim().slice(0, 2000) || null,
+    startsAt,
+    endsAt,
+    category,
+    audience,
+    location: String(payload.location || "").trim().slice(0, 200) || null,
+  };
+}
+
+export async function createTeamCalendarEvent(payload) {
+  const session = await requireStaffSession();
+  const data = parseTeamEventInput(payload);
+
+  const event = await prisma.teamCalendarEvent.create({
+    data: {
+      ...data,
+      createdById: actorId(session),
+    },
+  });
+
+  await notifyTeamCalendarEvent(event, { actorId: actorId(session) });
+  await prisma.teamCalendarEvent.update({
+    where: { id: event.id },
+    data: { createNotifiedAt: new Date() },
+  });
+
+  await recordAudit({
+    userId: actorId(session),
+    action: "calendar_event.created",
+    entityType: "team_calendar_event",
+    entityId: event.id,
+    summary: `Evento de calendario: ${event.title}`,
+  });
+
+  revalidatePath("/calendar");
+  return { ok: true, id: event.id };
+}
+
+export async function updateTeamCalendarEvent(eventId, payload) {
+  const session = await requireStaffSession();
+  const existing = await prisma.teamCalendarEvent.findUnique({ where: { id: eventId } });
+  if (!existing) throw new Error("Evento no encontrado");
+
+  const data = parseTeamEventInput(payload);
+  const event = await prisma.teamCalendarEvent.update({
+    where: { id: eventId },
+    data: { ...data, reminderSentAt: null },
+  });
+
+  await notifyTeamCalendarEvent(event, { actorId: actorId(session), isUpdate: true });
+
+  await recordAudit({
+    userId: actorId(session),
+    action: "calendar_event.updated",
+    entityType: "team_calendar_event",
+    entityId: event.id,
+    summary: `Evento actualizado: ${event.title}`,
+  });
+
+  revalidatePath("/calendar");
+  return { ok: true };
+}
+
+export async function deleteTeamCalendarEvent(eventId) {
+  const session = await requireStaffSession();
+  const existing = await prisma.teamCalendarEvent.findUnique({ where: { id: eventId } });
+  if (!existing) throw new Error("Evento no encontrado");
+
+  await prisma.teamCalendarEvent.delete({ where: { id: eventId } });
+
+  await recordAudit({
+    userId: actorId(session),
+    action: "calendar_event.deleted",
+    entityType: "team_calendar_event",
+    entityId: eventId,
+    summary: `Evento eliminado: ${existing.title}`,
+  });
+
+  revalidatePath("/calendar");
   return { ok: true };
 }
 

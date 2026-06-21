@@ -63,6 +63,21 @@ enum QuoteProjectType {
   CONSULTING
 }
 
+enum TeamEventCategory {
+  TRAINING
+  ANNOUNCEMENT
+  MEETING
+  NOVELTY
+  OTHER
+}
+
+enum TeamEventAudience {
+  ALL
+  SALES
+  MARKETING
+  ADMINS
+}
+
 model User {
   id                   String    @id @default(cuid())
   email                String    @unique
@@ -93,6 +108,7 @@ model User {
   marketingTemplates   MarketingTemplate[] @relation("MarketingTemplateCreator")
   auditLogs            AuditLog[]
   sessions             UserSession[]
+  teamCalendarEvents   TeamCalendarEvent[] @relation("TeamEventCreator")
 }
 
 model AuditLog {
@@ -219,6 +235,26 @@ model Meeting {
   notes           String?  @db.Text
 
   @@index([contactId])
+}
+
+model TeamCalendarEvent {
+  id               String            @id @default(cuid())
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  title            String
+  description      String?           @db.Text
+  startsAt         DateTime
+  endsAt           DateTime?
+  category         TeamEventCategory @default(OTHER)
+  audience         TeamEventAudience @default(ALL)
+  location         String?
+  createdById      String
+  createdBy        User              @relation("TeamEventCreator", fields: [createdById], references: [id])
+  createNotifiedAt DateTime?
+  reminderSentAt   DateTime?
+
+  @@index([startsAt])
+  @@index([createdById])
 }
 
 model SurveyResponse {

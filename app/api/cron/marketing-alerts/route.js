@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { alertStalePendingPosts } from "@/lib/social/alerts.js";
 import { sendWeeklyReportIfDue } from "@/lib/weekly-report.js";
+import { sendCalendarEventReminders } from "@/lib/team-calendar.js";
 import { rateLimitResponse } from "@/lib/rate-limit";
 
 /** Cron: alertas marketing + informe semanal (Hobby: un solo slot diario). */
@@ -25,12 +26,18 @@ export async function GET(req) {
   try {
     const alerts = await alertStalePendingPosts();
     let weeklyReport = null;
+    let calendarReminders = null;
     try {
       weeklyReport = await sendWeeklyReportIfDue();
     } catch (weeklyErr) {
       console.error("cron weekly-report:", weeklyErr);
     }
-    return NextResponse.json({ ok: true, alerts, weeklyReport });
+    try {
+      calendarReminders = await sendCalendarEventReminders();
+    } catch (calErr) {
+      console.error("cron calendar-reminders:", calErr);
+    }
+    return NextResponse.json({ ok: true, alerts, weeklyReport, calendarReminders });
   } catch (err) {
     console.error("cron/marketing-alerts:", err);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
