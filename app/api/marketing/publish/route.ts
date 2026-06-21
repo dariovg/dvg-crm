@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       results.X = {
         success: false,
         error:
-          "X API no configurada. Añade X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN y X_ACCESS_TOKEN_SECRET en Vercel.",
+          "X API no configurada. En Vercel: X_CONSUMER_KEY, X_CONSUMER_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET.",
       };
     } else {
       try {

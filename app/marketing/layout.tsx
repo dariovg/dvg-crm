@@ -6,6 +6,8 @@ import { canAccessMarketing } from "@/lib/permissions";
 import AppShell from "@/components/AppShell";
 import MarketingSubnav from "@/components/MarketingSubnav";
 
+export const dynamic = "force-dynamic";
+
 interface MarketingLayoutProps {
   children: React.ReactNode;
 }
