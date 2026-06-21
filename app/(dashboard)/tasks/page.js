@@ -14,7 +14,7 @@ export default async function TasksPage() {
       where: scope,
       orderBy: [{ done: "asc" }, { dueAt: "asc" }],
       include: {
-        contact: true,
+        contact: { select: { id: true, name: true, email: true, status: true } },
         assignee: { select: { id: true, email: true, name: true, role: true } },
       },
     }),

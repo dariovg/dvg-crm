@@ -16,11 +16,6 @@ export default async function PipelinePage() {
     orderBy: { updatedAt: "desc" },
     include: {
       assignee: { select: { id: true, email: true, name: true, role: true } },
-      meetings: { select: { id: true }, take: 1 },
-      quotes: { select: { id: true }, take: 1 },
-      surveys: { orderBy: { createdAt: "desc" }, take: 1, select: { score: true } },
-      events: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
-      tasks: { orderBy: { updatedAt: "desc" }, take: 1, select: { updatedAt: true, createdAt: true } },
     },
   });
   const contacts = withLeadScores(rawContacts, scoringRules);

@@ -28,6 +28,7 @@ export function applyLocale(locale) {
   document.documentElement.setAttribute("lang", locale);
   try {
     localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+    document.cookie = `${LOCALE_STORAGE_KEY}=${locale};path=/;max-age=31536000;SameSite=Lax`;
   } catch {
     /* ignore */
   }

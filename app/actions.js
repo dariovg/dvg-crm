@@ -579,13 +579,9 @@ export async function fetchScopedContacts(filters = {}) {
   const contacts = await prisma.contact.findMany({
     where,
     orderBy: { createdAt: "desc" },
+    take: filters.limit ?? 300,
     include: {
       assignee: { select: { id: true, email: true, name: true, role: true } },
-      meetings: { orderBy: { createdAt: "desc" }, take: 1 },
-      quotes: { select: { id: true }, take: 1 },
-      surveys: { orderBy: { createdAt: "desc" }, take: 1, select: { score: true } },
-      events: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
-      tasks: { orderBy: { updatedAt: "desc" }, take: 1, select: { updatedAt: true, createdAt: true } },
     },
   });
   return withLeadScores(contacts, rules);
