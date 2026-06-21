@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { APP_VERSION } from "@/lib/version";
+import { getTwitterConfigDiagnostics } from "@/lib/social/twitter.js";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,13 +18,16 @@ export async function GET() {
     database = "down";
   }
 
+  const x = getTwitterConfigDiagnostics();
   const ok = database === "up";
 
   return NextResponse.json(
     {
       ok,
       version: APP_VERSION,
+      commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || null,
       database,
+      x: { ready: x.ready, missing: x.missing },
       timestamp,
       service: "dvg-crm",
     },
