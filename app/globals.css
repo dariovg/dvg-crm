@@ -2442,6 +2442,44 @@ body {
   background: #fff7ed;
 }
 
+.quote-pack-month-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: .75rem;
+  margin-bottom: .75rem;
+}
+.quote-pack-month-card {
+  border: 1px solid #dde2ea;
+  border-radius: 12px;
+  padding: .85rem;
+  background: #fff;
+}
+.quote-pack-month-card--active {
+  border-color: var(--orange);
+  background: #fffaf5;
+}
+.quote-pack-month-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: .5rem;
+  margin-bottom: .65rem;
+}
+.quote-pack-month-card-head strong { color: var(--navy); }
+.quote-pack-month-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+.quote-pack-month-btn--added {
+  opacity: .65;
+  cursor: default;
+}
+.quote-pack-month-meta {
+  margin: .55rem 0 0;
+  font-size: .82rem;
+}
+
 .quote-lines-table textarea,
 .quote-line-textarea {
   width: 100%;

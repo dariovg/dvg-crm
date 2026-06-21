@@ -32,7 +32,7 @@ import {
   computeQuoteTotal,
   generateQuoteNumber,
   needsApproval,
-  buildIaPackLineFields,
+  buildDefaultIaPackLines,
   packLineDescription,
 } from "@/lib/quotes";
 import { planById } from "@/lib/pricing-catalog";
@@ -1037,34 +1037,18 @@ export async function createQuote(
   }
 
   if (packId && projectType === "IA") {
-    const price = catalogPriceForPack(packId, resolvedBilling);
-    const promo = buildIaPackLineFields(packId, resolvedBilling);
-    const nonPack = lines.filter((l) => l.type !== "PACK");
+    const nonPack = lines.filter((l) => !(l.type === "PACK" && l.packId === packId));
+    const iaLines = buildDefaultIaPackLines(packId, resolvedBilling);
     lines = [
-      {
-        type: "PACK",
-        packId,
-        description: promo.description,
-        quantity: 1,
-        unitPrice: price,
-        discountPercent: promo.discountPercent,
-        sortOrder: 0,
-      },
-      ...nonPack.map((l, i) => ({ ...l, sortOrder: i + 1 })),
+      ...iaLines.map((l, i) => ({ ...l, sortOrder: i })),
+      ...nonPack.map((l, i) => ({ ...l, sortOrder: iaLines.length + i })),
     ];
     resolvedPackId = packId;
   } else if (!lines.length && packId) {
-    const price = catalogPriceForPack(packId, resolvedBilling);
-    const promo = buildIaPackLineFields(packId, resolvedBilling);
-    lines.push({
-      type: "PACK",
-      packId,
-      description: promo.description,
-      quantity: 1,
-      unitPrice: price,
-      discountPercent: promo.discountPercent,
-      sortOrder: 0,
-    });
+    lines = buildDefaultIaPackLines(packId, resolvedBilling).map((l, i) => ({
+      ...l,
+      sortOrder: i,
+    }));
     resolvedPackId = packId;
   }
 
@@ -1476,42 +1460,17 @@ export async function addPackToQuote(quoteId, packId) {
   const quote = await getQuoteForUser(session, quoteId);
   if (!canEditQuote(session, quote)) throw new Error("No autorizado");
 
-  const price = catalogPriceForPack(packId, quote.billing);
-  const promo = buildIaPackLineFields(packId, quote.billing);
-  const existing = quote.lines.filter((l) => l.type !== "PACK" || l.packId !== packId);
-  const packLines = quote.lines.filter((l) => l.type === "PACK");
-  const otherPacks = packLines.filter((l) => l.packId !== packId);
-
-  const lines = [
-    ...otherPacks.map((l, i) => ({
-      type: l.type,
-      packId: l.packId,
-      description: l.description,
-      quantity: l.quantity,
-      unitPrice: l.unitPrice,
-      discountPercent: l.discountPercent,
-      sortOrder: i,
-    })),
-    {
-      type: "PACK",
-      packId,
-      description: promo.description,
-      quantity: 1,
-      unitPrice: price,
-      discountPercent: promo.discountPercent,
-      sortOrder: otherPacks.length,
-    },
-    ...existing
-      .filter((l) => l.type !== "PACK")
-      .map((l, i) => ({
-        type: l.type,
-        description: l.description,
-        quantity: l.quantity,
-        unitPrice: l.unitPrice,
-        discountPercent: l.discountPercent,
-        sortOrder: otherPacks.length + 1 + i,
-      })),
-  ];
+  const kept = quote.lines.filter((l) => !(l.type === "PACK" && l.packId === packId));
+  const newPackLines = buildDefaultIaPackLines(packId, quote.billing);
+  const lines = [...kept, ...newPackLines].map((l, i) => ({
+    type: l.type,
+    packId: l.packId ?? null,
+    description: l.description,
+    quantity: l.quantity,
+    unitPrice: l.unitPrice,
+    discountPercent: l.discountPercent ?? null,
+    sortOrder: i,
+  }));
 
   await prisma.quote.update({
     where: { id: quoteId },

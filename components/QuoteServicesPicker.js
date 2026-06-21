@@ -1,7 +1,19 @@
 "use client";
 
-import { PLANS, formatEuro, packLineDescription, buildIaPackLineFields, firstMonthIaPrice, annualUpfrontIaTotal, FIRST_MONTH_IA_DISCOUNT_PERCENT } from "@/lib/pricing-catalog";
-import { catalogPriceForPack } from "@/lib/quotes";
+import {
+  PLANS,
+  formatEuro,
+  buildIaFirstMonthLine,
+  buildIaRegularMonthLine,
+  isIaFirstMonthLine,
+  isIaRegularMonthLine,
+  iaFirstMonthLineDescription,
+  iaRegularMonthLineDescription,
+  firstMonthIaPrice,
+  packUnitPrice,
+  FIRST_MONTH_IA_DISCOUNT_PERCENT,
+} from "@/lib/pricing-catalog";
+import { catalogPriceForPack, countIaContractMonths } from "@/lib/quotes";
 import {
   QUOTE_TEMPLATES,
   isTemplateInLines,
@@ -16,20 +28,26 @@ export default function QuoteServicesPicker({
   onBillingChange,
   disabled = false,
 }) {
+  function reindex(next) {
+    return next.map((l, i) => ({ ...l, sortOrder: i }));
+  }
+
   function syncPackPrices(nextBilling) {
     onChange(
-      lines.map((line) => {
-        if (line.type === "PACK" && line.packId) {
-          const promo = buildIaPackLineFields(line.packId, nextBilling);
-          return {
-            ...line,
-            unitPrice: catalogPriceForPack(line.packId, nextBilling),
-            discountPercent: promo.discountPercent,
-            description: promo.description,
-          };
-        }
-        return line;
-      })
+      reindex(
+        lines.map((line) => {
+          if (line.type === "PACK" && line.packId) {
+            return {
+              ...line,
+              unitPrice: catalogPriceForPack(line.packId, nextBilling),
+              description: isIaFirstMonthLine(line)
+                ? iaFirstMonthLineDescription(line.packId, nextBilling)
+                : iaRegularMonthLineDescription(line.packId, nextBilling),
+            };
+          }
+          return line;
+        })
+      )
     );
   }
 
@@ -49,40 +67,61 @@ export default function QuoteServicesPicker({
         billing,
         lines,
         catalogPriceForPack,
-        packLineDescription
+        iaRegularMonthLineDescription
       );
-      nextLines = [...lines, ...added].map((l, i) => ({ ...l, sortOrder: i }));
+      nextLines = reindex([...lines, ...added]);
     }
     onChange(nextLines);
   }
 
-  function addPack(packId) {
-    if (disabled || lines.some((l) => l.type === "PACK" && l.packId === packId)) return;
-    const promo = buildIaPackLineFields(packId, billing);
-    onChange([
-      ...lines,
-      {
-        type: "PACK",
-        packId,
-        description: promo.description,
-        quantity: 1,
-        unitPrice: catalogPriceForPack(packId, billing),
-        discountPercent: promo.discountPercent,
-        sortOrder: lines.length,
-      },
-    ]);
+  function hasFirstMonthLine(packId) {
+    return lines.some((l) => isIaFirstMonthLine(l) && l.packId === packId);
   }
 
-  function removePack(packId) {
-    if (disabled) return;
-    onChange(lines.filter((l) => !(l.type === "PACK" && l.packId === packId)));
+  function findRegularMonthLine(packId) {
+    return lines.find(
+      (l) => isIaRegularMonthLine(l) && l.packId === packId && !l.discountPercent
+    );
   }
+
+  function addFirstMonth(packId) {
+    if (disabled || hasFirstMonthLine(packId)) return;
+    onChange(reindex([...lines, buildIaFirstMonthLine(packId, billing, lines.length)]));
+  }
+
+  function addRegularMonth(packId, quantity = 1) {
+    if (disabled) return;
+    const existing = findRegularMonthLine(packId);
+    if (existing) {
+      onChange(
+        reindex(
+          lines.map((l) =>
+            l === existing
+              ? { ...l, quantity: (l.quantity || 1) + quantity }
+              : l
+          )
+        )
+      );
+      return;
+    }
+    onChange(
+      reindex([...lines, buildIaRegularMonthLine(packId, billing, quantity, lines.length)])
+    );
+  }
+
+  function removePackLines(packId) {
+    if (disabled) return;
+    onChange(reindex(lines.filter((l) => !(l.type === "PACK" && l.packId === packId))));
+  }
+
+  const contractMonths = countIaContractMonths(lines);
 
   return (
     <>
       <p className="muted quote-pack-hint" style={{ marginTop: 0 }}>
-        Pulsa cada servicio para <strong>añadirlo o quitarlo</strong>. Puedes combinar{" "}
-        <strong>Web / App + Agente IA Pro</strong> (u otros planes) en el mismo presupuesto.
+        Pulsa cada servicio para <strong>añadirlo o quitarlo</strong>. En planes IA elige{" "}
+        <strong>Mes 1</strong> (promo −40%) y <strong>Meses normales</strong> (cantidad en la
+        tabla). Ejemplo contrato 4 meses: 1× Mes 1 + 3× Mes normal.
       </p>
       <div className="quote-template-picker">
         {Object.values(QUOTE_TEMPLATES).map((tpl) => {
@@ -112,58 +151,78 @@ export default function QuoteServicesPicker({
           onChange={(e) => handleBillingChange(e.target.value)}
           disabled={disabled}
         >
-          <option value="MONTHLY">Mensual</option>
-          <option value="ANNUAL">Anual (−15% + promo mes 1 IA · pago único)</option>
+          <option value="MONTHLY">Mensual (tarifa catálogo)</option>
+          <option value="ANNUAL">Anual (−15% en tarifa mensual)</option>
         </select>
       </div>
-      <p className="muted quote-pack-hint">
-        Promo confianza mutua: <strong>−{FIRST_MONTH_IA_DISCOUNT_PERCENT}%</strong> en el
-        mantenimiento del <strong>mes 1</strong> de packs IA (Starter/Pro/Enterprise). En anual,
-        el −40% se aplica sobre la tarifa ya con −15%; pago único de 12 meses. No aplica a web,
-        consultoría ni implementación.
-      </p>
-      <h3 className="quote-pack-heading">Planes IA</h3>
-      <div className="quote-pack-picker">
+      <h3 className="quote-pack-heading">Planes IA — mantenimiento</h3>
+      <div className="quote-pack-month-grid">
         {PLANS.map((plan) => {
-          const selected = lines.some((l) => l.type === "PACK" && l.packId === plan.id);
-          const catalog = catalogPriceForPack(plan.id, billing);
-          const mes1 =
-            billing === "MONTHLY"
-              ? firstMonthIaPrice(plan.monthly)
-              : firstMonthIaPrice(catalog);
-          const upfront =
-            billing === "ANNUAL" ? annualUpfrontIaTotal(plan.monthly) : null;
+          const rate = packUnitPrice(plan.id, billing);
+          const mes1 = firstMonthIaPrice(rate);
+          const hasFirst = hasFirstMonthLine(plan.id);
+          const regular = findRegularMonthLine(plan.id);
+          const hasAny = lines.some((l) => l.type === "PACK" && l.packId === plan.id);
+
           return (
-            <button
+            <div
               key={plan.id}
-              type="button"
-              className={`quote-pack-btn${selected ? " quote-pack-btn--active" : ""}`}
-              onClick={() => (selected ? removePack(plan.id) : addPack(plan.id))}
-              disabled={disabled}
-              title={selected ? "Quitar plan" : "Añadir plan"}
+              className={`quote-pack-month-card${hasAny ? " quote-pack-month-card--active" : ""}`}
             >
-              <strong>{plan.name}</strong>
-              <span>
-                {formatEuro(catalog)}/mes
-                {mes1 != null && (
-                  <>
-                    {" "}
-                    · Mes 1: {formatEuro(mes1)} (−{FIRST_MONTH_IA_DISCOUNT_PERCENT}%
-                    {billing === "ANNUAL" ? " sobre tarifa anual" : ""})
-                  </>
+              <div className="quote-pack-month-card-head">
+                <strong>{plan.name}</strong>
+                <span className="muted">{formatEuro(rate)}/mes</span>
+              </div>
+              <div className="quote-pack-month-actions">
+                <button
+                  type="button"
+                  className={`btn-secondary btn-sm${hasFirst ? " quote-pack-month-btn--added" : ""}`}
+                  onClick={() => addFirstMonth(plan.id)}
+                  disabled={disabled || hasFirst}
+                  title="Mes 1 con promo confianza mutua"
+                >
+                  + Mes 1 ({formatEuro(mes1)})
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  onClick={() => addRegularMonth(plan.id, 1)}
+                  disabled={disabled}
+                  title="Añade un mes normal; edita la cantidad en la tabla"
+                >
+                  + Mes normal ({formatEuro(rate)})
+                </button>
+                {hasAny && (
+                  <button
+                    type="button"
+                    className="btn-ghost-sm"
+                    onClick={() => removePackLines(plan.id)}
+                    disabled={disabled}
+                    title="Quitar todas las líneas de este plan"
+                  >
+                    Quitar plan
+                  </button>
                 )}
-                {upfront != null && (
-                  <> · Pago único 12 meses: {formatEuro(upfront)}</>
-                )}
-                {selected ? " · Añadido" : ""}
-              </span>
-            </button>
+              </div>
+              {regular && (
+                <p className="muted quote-pack-month-meta">
+                  Meses normales añadidos: <strong>{regular.quantity || 1}</strong> (edita cantidad
+                  abajo)
+                </p>
+              )}
+            </div>
           );
         })}
       </div>
       <p className="muted quote-pack-hint">
-        {lines.length} línea{lines.length === 1 ? "" : "s"} seleccionada
-        {lines.length === 1 ? "" : "s"}. Los planes se suman sin sustituir otros servicios.
+        {lines.length} línea{lines.length === 1 ? "" : "s"}
+        {contractMonths > 0 && (
+          <>
+            {" "}
+            · <strong>{contractMonths} mes(es)</strong> de mantenimiento IA en total
+          </>
+        )}
+        . Promo mes 1: −{FIRST_MONTH_IA_DISCOUNT_PERCENT}% (solo packs IA).
       </p>
     </>
   );

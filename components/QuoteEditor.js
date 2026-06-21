@@ -27,6 +27,7 @@ import {
   QUOTE_BILLING_LABEL,
   VAT_RATE,
   hasIaFirstMonthPromo,
+  countIaContractMonths,
   FIRST_MONTH_IA_DISCOUNT_PERCENT,
 } from "@/lib/quotes";
 import {
@@ -226,16 +227,16 @@ export default function QuoteEditor({ quote, isAdmin, canEdit, canDelete = false
         defaultOpen
       >
         <QuoteLineEditor lines={lines} onChange={setLines} readOnly={readOnly} compact={!readOnly} billing={billing} />
-        {hasIaFirstMonthPromo(lines) && billing === "MONTHLY" && (
+        {hasIaFirstMonthPromo(lines) && (
           <p className="muted quote-pack-hint">
-            Mes 1 mantenimiento agente IA −{FIRST_MONTH_IA_DISCOUNT_PERCENT}% (promo confianza mutua).
-            Total refleja mes 1; meses 2+ al precio unitario.
-          </p>
-        )}
-        {hasIaFirstMonthPromo(lines) && billing === "ANNUAL" && (
-          <p className="muted quote-pack-hint">
-            Facturación anual en pago único: 11 meses a tarifa −15%, mes 1 con −
-            {FIRST_MONTH_IA_DISCOUNT_PERCENT}% adicional sobre esa tarifa.
+            Contrato IA: suma líneas <strong>Mes 1</strong> (−{FIRST_MONTH_IA_DISCOUNT_PERCENT}%) y{" "}
+            <strong>Mes normal</strong> (cantidad = meses restantes).
+            {countIaContractMonths(lines) > 0 && (
+              <>
+                {" "}
+                Total: <strong>{countIaContractMonths(lines)} mes(es)</strong> de mantenimiento.
+              </>
+            )}
           </p>
         )}
         <div className="quote-totals">
@@ -271,15 +272,7 @@ export default function QuoteEditor({ quote, isAdmin, canEdit, canDelete = false
             <strong>{formatEuro(vatTotal)}</strong>
           </div>
           <div className="quote-total-row">
-            <span>
-              Total{" "}
-              {billing === "ANNUAL" && hasIaFirstMonthPromo(lines)
-                ? "anual (12 meses, pago único)"
-                : billing === "ANNUAL"
-                  ? "anual (12 meses)"
-                  : "(mensual)"}{" "}
-              con IVA
-            </span>
+            <span>Total contrato con IVA</span>
             <strong>{formatEuro(totalWithVat)}</strong>
           </div>
         </div>
